@@ -43,7 +43,6 @@ def anime_search(title):
     anime_title = ((r.json())['data'][0]['title'])
     return mal_id, anime_title
 
-#Formats Anime Name into: Title Season Part
 def format_season(anime, season=0, part=0):
 
     """
@@ -140,7 +139,6 @@ def anime_episodes_kitsu(title, next=None):
     return final_ep_no, final_all_eps
     #print(json.dumps((r.json())['data'][0]['attributes']['canonicalTitle'], indent=4, sort_keys=True))
 
-#Formats all the Episode Numbers
 def format_zeros(number, max_number=1):
 
     """
@@ -151,7 +149,6 @@ def format_zeros(number, max_number=1):
         max_number *= 10
     return number.zfill(len(str(max_number)))
 
-#Removes punctuations that are invalid for windows file name
 def format_punctuations(string):
 
     """
@@ -164,7 +161,6 @@ def format_punctuations(string):
         string = string.replace(p, '')
     return string
 
-#Returns Formatted EPs from Paged Result
 def extract_episodes(episodes_data):
 
     """
@@ -184,11 +180,10 @@ def extract_episodes(episodes_data):
 
     return ep_no, ep_title
 
-#Renames Files
-
 def filename_fix_existing(filename, dirname):
 
-    """Expands name portion of filename with numeric ' (x)' suffix to
+    """
+    Expands name portion of filename with numeric ' (x)' suffix to
     return filename that doesn't exist already.
     """
 

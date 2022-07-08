@@ -9,8 +9,7 @@ os.system('cls')
 
 print("Please Make sure you have renamed your season/name folder(s) with the MAL ID of the Anime.\n")
 
-#directory = input("Path of the parent Anime folder of the Anime to be renamed: ")
-directory = r'C:\Users\hmjoisa\Downloads\Media\Anime\TV\Haikyuu!! (2014-20)'
+directory = input("Path of Anime: ")
 
 class Anime:
 

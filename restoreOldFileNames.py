@@ -46,7 +46,7 @@ with open(pathAndFilenameList[selection]) as f:
     console.print("[b][u]Restoring File Names\n")
 
     for title in new_titles:
-        #os.rename(os.path.join(rename_path, f"{title}"), os.path.join(rename_path, f"{new_titles[title]}"))
+        os.rename(os.path.join(rename_path, f"{title}"), os.path.join(rename_path, f"{new_titles[title]}"))
         renderables = [Panel(f"[b]{title}\n\n[green]{new_titles[title]}")]
         console.print(Columns(renderables))
 
