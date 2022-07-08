@@ -1,0 +1,7 @@
+/.vscode
+commiter.bat
+/__pycache__
+/old
+data.json
+test.py
+OldFileNames.json
