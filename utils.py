@@ -1,12 +1,20 @@
 import requests
 import json
-import glob, os
+import glob, os, pathlib, sys
 import re
 #from thefuzz import fuzz
-import time
 from icecream import ic
 import copy
 from ratelimit import limits, sleep_and_retry
+
+from rich import print
+from rich.console import Console
+from rich.panel import Panel
+from rich.columns import Columns
+from rich.tree import Tree
+from rich.filesize import decimal
+from rich.markup import escape
+from rich.text import Text
 
 global all_episodes
 global all_ep_no
@@ -14,22 +22,21 @@ all_ep_no = []
 all_episodes = []
 
 @sleep_and_retry
-@limits(calls=3, period=1)
+@limits(calls=3, period=4)
 def fetch_url(base_url, params=None):
 
     """
     Returns data from get request.
-    Rate Limiting: 3 calls per second.
+    Rate Limit: 3 calls per second.
     """
 
     r = requests.get(base_url, params=params) if params == None else requests.get(base_url)
     return r
 
-#Gets Anime by Title
 def anime_search(title):
 
     """
-    Returns MyAnimeList ID and Title of Anime.
+    Returns MyAnimeList ID using Title of Anime.
     """
 
     r = fetch_url("https://api.jikan.moe/v4/anime", {"q": title, "limit": 5, "type": "tv", "order_by": "title"})
@@ -47,7 +54,7 @@ def format_season(anime, season=0, part=0):
 
     """
     Formats Anime season titles in the following format: Season Part Title
-    Example: S01P01 - Season Title
+    Example: S01P01 - Season-Title
     """
 
     if(season < 1):
@@ -66,7 +73,6 @@ def anime_title(mal_id):
     Returns Anime Title using MyAnimeList ID.
     """
 
-    ic(mal_id)
     r = fetch_url(f"https://api.jikan.moe/v4/anime/{mal_id}")
     return ((r.json())['data']['title'])
 
@@ -79,16 +85,13 @@ def anime_episodes(mal_id, title, page=1):
 
     r = fetch_url(f"https://api.jikan.moe/v4/anime/{mal_id}/episodes", {"page": page})
 
-    if not bool((r.json())['data']):
-        print("\n")
-        print("DATA EMPTY, FALLING BACK TO KITSU API")
-        ic(r.json())
-        print("\n")
-        return anime_episodes_kitsu(title)
-
     try:
+        if not bool((r.json())['data']):
+            print("\n")
+            print("DATA EMPTY, FALLING BACK TO KITSU API")
+            print("\n")
+            return anime_episodes_kitsu(title)
         all_episodes.append((r.json())['data'])
-        ic(r.json())
         #print(json.dumps((r.json()), indent=4, sort_keys=True))
     except Exception as e:
         print(json.dumps((r.json()), indent=4, sort_keys=True))
@@ -97,10 +100,11 @@ def anime_episodes(mal_id, title, page=1):
 
     if (r.json())['pagination']['has_next_page'] == True:
         page += 1
-        anime_episodes_kitsu(mal_id, page)
+        anime_episodes(mal_id, page)
+
     final_all_eps = copy.deepcopy(all_episodes) 
     del all_episodes[:]
-    return final_all_eps
+    return extract_episodes(final_all_eps) 
 
 def anime_episodes_kitsu(title, next=None):
 
@@ -166,8 +170,6 @@ def extract_episodes(episodes_data):
     """
     Returns a dictionary containing Episode Numbers and the respective Episode Title from the data fetched using anime_episodes()
     """
-
-    ic(episodes_data)
     ep_no = []
     ep_title = []
 
@@ -202,13 +204,16 @@ def filename_fix_existing(filename, dirname):
     return '%s (%d).%s' % (name, idx, ext)
 
 
-def rename(dir, pattern, episodes, anime_title):
+def rename(dir, pattern, episodes, dir_title):
 
     """
     Renames files using path, file pattern and episodes fetched using anime_episodes()
     """
 
     pathAndFilenameList = (sorted(list(glob.iglob(os.path.join(dir, pattern)))))
+
+    console = Console()
+    renderables = []
 
     ep_re = re.compile(r'([Ee][0-9]+)|([Ss][0-9]+[Ee][0-9]+)|([0-9]+)')
     last_no_re = re.compile(r'(\d+)[^\d]*$')
@@ -220,8 +225,8 @@ def rename(dir, pattern, episodes, anime_title):
     
     episodes_ar = sorted({i for i in episodes if int(i) >= int(ep_range[0]) and int(i) <= int(ep_range[1])})
     
-    old_new = {dir: {}}
-    
+    old_new = {os.path.join(os.path.dirname(dir), dir_title): {}}
+
     for i, ep_no in enumerate(episodes_ar):
         
         pathAndFilename = pathAndFilenameList[i]
@@ -229,23 +234,74 @@ def rename(dir, pattern, episodes, anime_title):
         title, ext = os.path.splitext(os.path.basename(pathAndFilename))
         episodeName = episodes[ep_no]
         
-        print (f"From: {title}\nTo:   E{ep_no} - {episodeName}\n")
+        renderables.append(Panel(f"[b]{title}\n\n[green]E{ep_no} - {episodeName}"))
 
-        old_new[dir].update({f'E{ep_no} - {episodeName}{ext}':f'{title}{ext}'})
-        #os.rename(pathAndFilename, os.path.join(dir, f"E{ep_no} - {episodeName}{ext}"))
+        #print (f"From: {title}\nTo:   E{ep_no} - {episodeName}\n")
 
-    oldfilespath = os.path.join(os.path.dirname(dir), 'Old Episode Titles')
+        old_new[os.path.join(os.path.dirname(dir), dir_title)].update({f'E{ep_no} - {episodeName}{ext}':f'{title}{ext}'})
+        os.rename(pathAndFilename, os.path.join(dir, f"E{ep_no} - {episodeName}{ext}"))
 
-    ic(oldfilespath)
+    console.print(Columns(renderables))
+    oldfilespath = os.path.join(os.path.dirname(dir), 'Episode Titles Backup')
 
     if not os.path.exists(oldfilespath):
         os.makedirs(oldfilespath)
 
+    os.rename(dir, os.path.join(os.path.dirname(dir), format_punctuations(dir_title)))
 
-    with open(os.path.join(oldfilespath, filename_fix_existing(f"{anime_title}.json", oldfilespath)), "w", encoding="utf-8") as f:
+    with open(os.path.join(oldfilespath, filename_fix_existing(f"{dir_title}.json", oldfilespath)), "w", encoding="utf-8") as f:
         f.write(json.dumps(old_new, indent = 4))
 
+def walk_directory(directory: pathlib.Path, tree: Tree) -> None:
+    """Recursively build a Tree with directory contents."""
+    # Credits: https://github.com/Textualize/rich/blob/master/examples/tree.py
+    # Sort dirs first then by filename
+    paths = sorted(
+        pathlib.Path(directory).iterdir(),
+        key=lambda path: (path.is_file(), path.name.lower()),
+    )
+    for path in paths:
+        # Remove hidden files
+        if path.name.startswith("."):
+            continue
+        if path.is_dir():
+            style = "dim" if path.name.startswith("__") else ""
+            branch = tree.add(
+                f"[bold magenta]:open_file_folder: [link file://{path}]{escape(path.name)}",
+                style=style,
+                guide_style=style,
+            )
+            walk_directory(path, branch)
+        else:
+            text_filename = Text(path.name, "green")
+            text_filename.highlight_regex(r"\..*$", "bold red")
+            text_filename.stylize(f"link file://{path}")
+            file_size = path.stat().st_size
+            text_filename.append(f" ({decimal(file_size)})", "blue")
+            icon = "📺 " if path.suffix == ".mkv" else "📄 "
+            tree.add(Text(icon) + text_filename)
 
+def user_input():
+
+    console = Console()
+
+    yes = {'yes','y'}
+    no = {'no','n'}
+
+    valid = False
+
+    console.print("\n[green]Proceed? (Y/N): ")
+
+    while (valid == False):
+
+        choice = input().lower()
+
+        if choice in yes:
+            valid = True
+        elif choice in no:
+            quit()
+        else:
+            console.print("\n[red]Please provide a valid input (Y/N): ")
 
 # def rename(dir, pattern, episodesList, epNo):
 
