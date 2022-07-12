@@ -1,8 +1,8 @@
-![Bulk_Anime_Renamer](https://user-images.githubusercontent.com/69304096/178139768-58d81c52-da09-4599-b4f4-2fd7caf9eb9c.png)
+![AniName Banner](https://user-images.githubusercontent.com/69304096/178553804-76c53186-01f1-4900-8927-6ff427de1c26.png)
 
-# Bulk Anime Renamer
+# AniName
 
-A powerful tool to rename anime episodes with episode titles with customizable formatting
+A powerful tool to batch rename anime episode files with episode titles with customizable formatting
 
 ## Acknowledgements
 
