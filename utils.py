@@ -1,8 +1,7 @@
 import requests
 import json
-import glob, os, pathlib, sys
+import glob, os, pathlib
 import re
-#from thefuzz import fuzz
 from icecream import ic
 import copy
 from ratelimit import limits, sleep_and_retry
@@ -20,6 +19,24 @@ global all_episodes
 global all_ep_no
 all_ep_no = []
 all_episodes = []
+
+def parse_folder(folder_name):
+
+    var = re.search(r'^([0-9]+)$|^([0-9]+)([Ss][0-9]+)([Pp][0-9]+)?$', folder_name)
+
+    if var != None:
+
+        var = [i for i in var.groups() if i != None]
+
+        if len(var) == 1:
+            var.append(['', ''])
+
+        if len(var) == 2:
+            var.append('')
+
+        return var[0], var[1], var[2]
+
+    return None
 
 @sleep_and_retry
 @limits(calls=3, period=4)
@@ -159,10 +176,9 @@ def format_punctuations(string):
     Returns string with punctuations appropriate for Windows file name.
     """
 
-    string = string.replace(':', ' -')
-    punctuation = ['\\', '/', '?', '<', '>', '|', '"']
-    for p in punctuation:
-        string = string.replace(p, '')
+    string = re.sub(':', ' ', string)
+    string = re.sub(r'["\/<>\?\\\| +]+', ' ', string)
+
     return string
 
 def extract_episodes(episodes_data):
@@ -236,9 +252,10 @@ def rename(dir, pattern, episodes, dir_title):
         
         renderables.append(Panel(f"[b]{title}\n\n[green]E{ep_no} - {episodeName}"))
 
-        #print (f"From: {title}\nTo:   E{ep_no} - {episodeName}\n")
-
         old_new[os.path.join(os.path.dirname(dir), dir_title)].update({f'E{ep_no} - {episodeName}{ext}':f'{title}{ext}'})
+
+        #TODO: Impliment Customizable Title Formatting
+        #rename_string = episode_format.format(episode_number=ep_no, episode_title=episodeName)
         os.rename(pathAndFilename, os.path.join(dir, f"E{ep_no} - {episodeName}{ext}"))
 
     console.print(Columns(renderables))
@@ -249,7 +266,7 @@ def rename(dir, pattern, episodes, dir_title):
 
     os.rename(dir, os.path.join(os.path.dirname(dir), format_punctuations(dir_title)))
 
-    with open(os.path.join(oldfilespath, filename_fix_existing(f"{dir_title}.json", oldfilespath)), "w", encoding="utf-8") as f:
+    with open(os.path.join(oldfilespath, filename_fix_existing(f"{format_punctuations(dir_title)}.json", oldfilespath)), "w", encoding="utf-8") as f:
         f.write(json.dumps(old_new, indent = 4))
 
 def walk_directory(directory: pathlib.Path, tree: Tree) -> None:

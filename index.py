@@ -9,6 +9,18 @@ from rich.console import Console
 from rich.tree import Tree
 from rich import box
 
+"""
+TODO:
+
+import configparser
+
+config_file = configparser.ConfigParser()
+config_file.read("conf.ini")
+
+ep_format = config_file['Formatting']['episode_format']
+season_format = config_file['Formatting']['season_format']
+"""
+
 os.system('cls')
 
 console = Console()
@@ -46,6 +58,9 @@ for i, path in enumerate(anime.full_paths):
     utils.rename(path, r'*.mkv', anime.episodes[anime.mal_ids[i]], anime.file_titles[anime.anime_dirs[i]])
 
 print()
+
+if anime.noSeasons == True:
+    directory = os.path.abspath(os.path.join(os.path.dirname(directory), utils.format_punctuations(anime.file_titles[anime.mal_ids[0]])))
 
 try:
     directory = os.path.abspath(directory)
