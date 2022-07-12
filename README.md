@@ -7,3 +7,5 @@ A powerful tool to batch rename anime episode files with episode titles with cus
 ## Acknowledgements
 
  - [Jikan REST API](https://github.com/jikan-me/jikan-rest)
+
+# Guide and more updates on the way!
