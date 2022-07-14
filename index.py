@@ -25,7 +25,7 @@ os.system('cls')
 
 console = Console()
 
-console.print("[b]Please Make sure you follow the guide on https://github.com/AbhiramH427/Bulk-Anime-Renamer before using the rename utility!\n")
+console.print("[b]Please Make sure you follow the guide on https://github.com/AbhiramH427/AniName before using the rename utility!\n")
 
 console.print("[b][u]Directory path of Anime:\n")
 directory = input()
