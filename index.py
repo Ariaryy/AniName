@@ -9,17 +9,22 @@ from rich.console import Console
 from rich.tree import Tree
 from rich import box
 
-"""
-TODO:
-
 import configparser
 
 config_file = configparser.ConfigParser()
-config_file.read("conf.ini")
+config_file.read("conf.ini", encoding='utf8')
 
-ep_format = config_file['Formatting']['episode_format']
-season_format = config_file['Formatting']['season_format']
-"""
+episode_format = config_file['formatting']['episode_format']
+episode_lang = config_file['preference']['episode_title']
+episode_prefix = config_file['preference']['episode_prefix']
+
+season_format = config_file['formatting']['season_format']
+season_lang = config_file['preference']['season_title']
+season_prefix = config_file['preference']['season_prefix']
+
+part_prefix = config_file['preference']['part_prefix']
+
+seperator = (config_file['preference']['seperator']).replace('"', '')
 
 os.system('cls')
 
@@ -32,7 +37,7 @@ directory = input()
 print()
 #directory = r"C:\Users\hmjoisa\Downloads\Media\Anime\TV\Haikyuu!! (2014-20)"
 
-anime = Anime(directory)
+anime = Anime(directory, season_lang, season_format, season_prefix, part_prefix, seperator)
 
 table = Table(title="[b][yellow]Anime(s) Found", box=box.ROUNDED, show_lines=True, highlight=True)
 
@@ -52,10 +57,18 @@ print ("\033[A                             \033[A")
 
 for i, path in enumerate(anime.full_paths):
 
-    console.print(f"\n[h1][b][u][yellow]Renaming: {anime.anime_titles[i]}\n")
-    anime.get_episodes(anime.mal_ids[i], anime.anime_titles[i])
+    season_title = anime.anime_titles[i]
+    season_number = anime.season_nos[i]
+    season_part = anime.part_nos[i]
 
-    utils.rename(path, r'*.mkv', anime.episodes[anime.mal_ids[i]], anime.file_titles[anime.anime_dirs[i]])
+    console.print(f"\n[h1][b][u][yellow]Renaming: {season_title}\n")
+    anime.get_episodes(anime.mal_ids[i], episode_lang)
+
+    episodes = anime.episodes[anime.mal_ids[i]]
+    file_titles = anime.file_titles[anime.anime_dirs[i]]
+    pattern = r'*.mkv'
+
+    utils.rename(path, pattern, episodes, file_titles, episode_format, season_number, season_part, season_title, season_prefix, episode_prefix, part_prefix, seperator)
 
 print()
 

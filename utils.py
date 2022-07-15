@@ -67,33 +67,55 @@ def anime_search(title):
     anime_title = ((r.json())['data'][0]['title'])
     return mal_id, anime_title
 
-def format_season(anime, season=0, part=0):
+def format_season(anime_title, format, season_prefix='', part_prefix='', seperator='', season=0, part=0):
 
     """
     Formats Anime season titles in the following format: Season Part Title
     Example: S01P01 - Season-Title
     """
 
-    if(season < 1):
-        season_name = f'{anime}'
-    elif (season >= 1):
-        season_name = f'S{format_zeros(str(season))} - {anime}'
+    part_number = ''
+    season_number = ''
+
+    #if (season < 1):
+        #return anime_title
+
+    if (part < 1):
+        part_prefix = ''
+
+    if (season >= 1):
+        season_number = format_zeros(str(season))
+        #season_name = f'S{format_zeros(str(season))} - {anime_title}'
 
     if (part >= 1):
-        season_name = f'S{format_zeros(str(season))}P{format_zeros(str(part))} - {anime}'
+        #season_name = f'S{format_zeros(str(season))}P{format_zeros(str(part))} - {anime_title}'
+        season_number = format_zeros(str(season))
+        part_number = format_zeros(str(part))
+    
+    season_name = format.format(season_number=season_number, season_title=anime_title, part_number=part_number, season_prefix=season_prefix, part_prefix=part_prefix, seperator=seperator)
 
     return season_name
 
-def anime_title(mal_id):
+def anime_title(mal_id, language):
 
     """
     Returns Anime Title using MyAnimeList ID.
     """
 
-    r = fetch_url(f"https://api.jikan.moe/v4/anime/{mal_id}")
-    return ((r.json())['data']['title'])
+    if language == 'romanji':
+        language = 'title'
+    elif language == 'japanese':
+        language = 'title_japanese'
+    else:
+        language = 'title_english'
 
-def anime_episodes(mal_id, title, page=1):
+    r = fetch_url(f"https://api.jikan.moe/v4/anime/{mal_id}")
+
+    title = (r.json())['data'][language]
+
+    return title
+
+def anime_episodes(mal_id, episode_lang, page=1):
 
     """
     Returns a dictonary of episodes of an Anime using MyAnimeList ID.
@@ -103,25 +125,30 @@ def anime_episodes(mal_id, title, page=1):
     r = fetch_url(f"https://api.jikan.moe/v4/anime/{mal_id}/episodes", {"page": page})
 
     try:
+
         if not bool((r.json())['data']):
             print("\n")
-            print("DATA EMPTY, FALLING BACK TO KITSU API")
+            print("DATA EMPTY")
             print("\n")
-            return anime_episodes_kitsu(title)
+            #return anime_episodes_kitsu(title)
+
         all_episodes.append((r.json())['data'])
         #print(json.dumps((r.json()), indent=4, sort_keys=True))
+
     except Exception as e:
+
         print(json.dumps((r.json()), indent=4, sort_keys=True))
         print("\n")
         print(e)
 
     if (r.json())['pagination']['has_next_page'] == True:
         page += 1
-        anime_episodes(mal_id, page)
+        anime_episodes(mal_id, episode_lang, page)
 
     final_all_eps = copy.deepcopy(all_episodes) 
     del all_episodes[:]
-    return extract_episodes(final_all_eps) 
+
+    return extract_episodes(final_all_eps, episode_lang) 
 
 def anime_episodes_kitsu(title, next=None):
 
@@ -176,12 +203,19 @@ def format_punctuations(string):
     Returns string with punctuations appropriate for Windows file name.
     """
 
-    string = re.sub(':', ' ', string)
-    string = re.sub(r'["\/<>\?\\\| +]+', ' ', string)
+    string = re.sub(':', ' ', str(string))
+    string = re.sub(r'["\/<>\?\\\| +]+', ' ', str(string))
 
     return string
 
-def extract_episodes(episodes_data):
+def extract_episodes(episodes_data, episode_lang):
+
+    if episode_lang == 'romanji':
+        episode_lang = 'title_romanji'
+    elif episode_lang == 'japanese':
+        episode_lang = 'title_japanese'
+    else:
+        episode_lang = 'title'
 
     """
     Returns a dictionary containing Episode Numbers and the respective Episode Title from the data fetched using anime_episodes()
@@ -192,7 +226,7 @@ def extract_episodes(episodes_data):
     for page in episodes_data:
         for ep in (page):   
             epn = format_zeros(str(ep['mal_id']), page[len(page)-1]['mal_id'])
-            ept = format_punctuations(ep['title'])
+            ept = format_punctuations(ep[episode_lang])
             ep_no.append(epn)         
             ep_title.append(ept)
 
@@ -220,7 +254,15 @@ def filename_fix_existing(filename, dirname):
     return '%s (%d).%s' % (name, idx, ext)
 
 
-def rename(dir, pattern, episodes, dir_title):
+def rename(dir, pattern, episodes, dir_title, episode_format, season_number='', season_part='', season_title='', season_preifx='', episode_prefix='', part_prefix='', seperator=''):
+
+    if int(season_part) < 1:
+        season_part = ''
+        part_prefix = ''
+
+    if int(season_number) < 1:
+        season_number = ''
+        season_preifx = ''
 
     """
     Renames files using path, file pattern and episodes fetched using anime_episodes()
@@ -249,14 +291,14 @@ def rename(dir, pattern, episodes, dir_title):
         
         title, ext = os.path.splitext(os.path.basename(pathAndFilename))
         episodeName = episodes[ep_no]
-        
-        renderables.append(Panel(f"[b]{title}\n\n[green]E{ep_no} - {episodeName}"))
 
         old_new[os.path.join(os.path.dirname(dir), dir_title)].update({f'E{ep_no} - {episodeName}{ext}':f'{title}{ext}'})
 
         #TODO: Impliment Customizable Title Formatting
-        #rename_string = episode_format.format(episode_number=ep_no, episode_title=episodeName)
-        os.rename(pathAndFilename, os.path.join(dir, f"E{ep_no} - {episodeName}{ext}"))
+        rename_string = episode_format.format(episode_number=ep_no, episode_title=episodeName, season_title=season_title, season_number=season_number, part_number=season_part, season_prefix=season_preifx, part_prefix=part_prefix, episode_prefix=episode_prefix, seperator=seperator)
+        #os.rename(pathAndFilename, os.path.join(dir, f"E{ep_no} - {episodeName}{ext}"))
+
+        renderables.append(Panel(f"[b]{title}\n\n[green]{rename_string}"))
 
     console.print(Columns(renderables))
     oldfilespath = os.path.join(os.path.dirname(dir), 'Episode Titles Backup')
@@ -264,7 +306,7 @@ def rename(dir, pattern, episodes, dir_title):
     if not os.path.exists(oldfilespath):
         os.makedirs(oldfilespath)
 
-    os.rename(dir, os.path.join(os.path.dirname(dir), format_punctuations(dir_title)))
+    #os.rename(dir, os.path.join(os.path.dirname(dir), format_punctuations(dir_title)))
 
     with open(os.path.join(oldfilespath, filename_fix_existing(f"{format_punctuations(dir_title)}.json", oldfilespath)), "w", encoding="utf-8") as f:
         f.write(json.dumps(old_new, indent = 4))
