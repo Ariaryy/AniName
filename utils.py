@@ -294,9 +294,8 @@ def rename(dir, pattern, episodes, dir_title, episode_format, season_number='', 
 
         old_new[os.path.join(os.path.dirname(dir), dir_title)].update({f'E{ep_no} - {episodeName}{ext}':f'{title}{ext}'})
 
-        #TODO: Impliment Customizable Title Formatting
         rename_string = episode_format.format(episode_number=ep_no, episode_title=episodeName, season_title=season_title, season_number=season_number, part_number=season_part, season_prefix=season_preifx, part_prefix=part_prefix, episode_prefix=episode_prefix, seperator=seperator)
-        #os.rename(pathAndFilename, os.path.join(dir, f"E{ep_no} - {episodeName}{ext}"))
+        os.rename(pathAndFilename, os.path.join(dir, f"E{ep_no} - {episodeName}{ext}"))
 
         renderables.append(Panel(f"[b]{title}\n\n[green]{rename_string}"))
 
@@ -306,7 +305,7 @@ def rename(dir, pattern, episodes, dir_title, episode_format, season_number='', 
     if not os.path.exists(oldfilespath):
         os.makedirs(oldfilespath)
 
-    #os.rename(dir, os.path.join(os.path.dirname(dir), format_punctuations(dir_title)))
+    os.rename(dir, os.path.join(os.path.dirname(dir), format_punctuations(dir_title)))
 
     with open(os.path.join(oldfilespath, filename_fix_existing(f"{format_punctuations(dir_title)}.json", oldfilespath)), "w", encoding="utf-8") as f:
         f.write(json.dumps(old_new, indent = 4))
