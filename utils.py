@@ -15,6 +15,8 @@ from rich.filesize import decimal
 from rich.markup import escape
 from rich.text import Text
 
+console = Console()
+
 global all_episodes
 global all_ep_no
 all_ep_no = []
@@ -36,7 +38,8 @@ def parse_folder(folder_name):
 
         return var[0], var[1], var[2]
 
-    return None
+    console.print("[b][red]Invalid folder formatting.\n[yellow]Learn more about folder formatting: [blue]https://github.com/AbhiramH427/AniName")
+    quit()
 
 @sleep_and_retry
 @limits(calls=3, period=4)
@@ -48,7 +51,12 @@ def fetch_url(base_url, params=None):
     """
 
     r = requests.get(base_url, params=params) if params == None else requests.get(base_url)
-    return r
+
+    if not r.status_code == 200:
+        console.print('[b][red]The provided the MyAnimeList ID is invalid.')
+        quit()
+
+    return r.json()
 
 def anime_search(title):
 
@@ -59,40 +67,48 @@ def anime_search(title):
     r = fetch_url("https://api.jikan.moe/v4/anime", {"q": title, "limit": 5, "type": "tv", "order_by": "title"})
 
     try:
-        mal_id = ((r.json())['data'][0]['mal_id'])
+        mal_id = (r['data'][0]['mal_id'])
     except Exception as e:
-        print(json.dumps((r.json()), indent=4, sort_keys=True))
+        print(json.dumps(r, indent=4, sort_keys=True))
         print("\n")
         print(e)
-    anime_title = ((r.json())['data'][0]['title'])
+    anime_title = (r['data'][0]['title'])
     return mal_id, anime_title
 
-def format_season(anime_title, format, season_prefix='', part_prefix='', seperator='', season=0, part=0):
+def format_season(anime_title, format, season_metadata, season=0, part=0):
 
     """
-    Formats Anime season titles in the following format: Season Part Title
-    Example: S01P01 - Season-Title
+    Formats Anime season titles in the format provided in the config file.
     """
 
-    part_number = ''
-    season_number = ''
+    season_metadata['season_title'] = anime_title
 
-    #if (season < 1):
-        #return anime_title
+    if (int(season) < 1):
+        season_metadata['season_prefix'] = ''
+        season_metadata['seperator'] = ''
 
-    if (part < 1):
-        part_prefix = ''
+    """
+    season_metadata = {
+        'season_prefix': season_prefix,
+        'part_prefix': part_prefix,
+        'seperator': seperator,
+        'season_number': '',
+        'season_title': '',
+        'part_number': '',
+    }
+    """
 
-    if (season >= 1):
-        season_number = format_zeros(str(season))
-        #season_name = f'S{format_zeros(str(season))} - {anime_title}'
+    if (int(part) < 1):
+        season_metadata['part_prefix'] = ''
 
-    if (part >= 1):
-        #season_name = f'S{format_zeros(str(season))}P{format_zeros(str(part))} - {anime_title}'
-        season_number = format_zeros(str(season))
-        part_number = format_zeros(str(part))
+    if (int(season) >= 1):
+        season_metadata['season_number'] = format_zeros(str(season))
+
+    if (int(part) >= 1):
+        season_metadata['season_number'] = format_zeros(str(season))
+        season_metadata['part_number'] = format_zeros(str(part))
     
-    season_name = format.format(season_number=season_number, season_title=anime_title, part_number=part_number, season_prefix=season_prefix, part_prefix=part_prefix, seperator=seperator)
+    season_name = format.format(**season_metadata)
 
     return season_name
 
@@ -111,7 +127,15 @@ def anime_title(mal_id, language):
 
     r = fetch_url(f"https://api.jikan.moe/v4/anime/{mal_id}")
 
-    title = (r.json())['data'][language]
+    if not 'data' in r:
+        console.print(f'[b][red]There was an error while fetching the Anime title. Double check the provided MyAnimeList ID: {mal_id}')
+        quit()
+
+    if not r['data']['type'] == "TV":
+        console.print('[b][red]Anime types except TV are not supported.')
+        quit()
+
+    title = (r['data'][language])
 
     return title
 
@@ -122,26 +146,15 @@ def anime_episodes(mal_id, episode_lang, page=1):
     On failure, fetches episodes from Kitsu API using Anime Title.
     """
 
-    r = fetch_url(f"https://api.jikan.moe/v4/anime/{mal_id}/episodes", {"page": page})
+    r = (fetch_url(f"https://api.jikan.moe/v4/anime/{mal_id}/episodes", {"page": page}))
 
-    try:
+    if not 'data' in r:
+        console.print(f'[b][red]There was an error while fetching the episodes. Double check the provided MyAnimeList ID {mal_id}')
+        quit()
 
-        if not bool((r.json())['data']):
-            print("\n")
-            print("DATA EMPTY")
-            print("\n")
-            #return anime_episodes_kitsu(title)
+    all_episodes.append(r['data'])
 
-        all_episodes.append((r.json())['data'])
-        #print(json.dumps((r.json()), indent=4, sort_keys=True))
-
-    except Exception as e:
-
-        print(json.dumps((r.json()), indent=4, sort_keys=True))
-        print("\n")
-        print(e)
-
-    if (r.json())['pagination']['has_next_page'] == True:
+    if r['pagination']['has_next_page'] == True:
         page += 1
         anime_episodes(mal_id, episode_lang, page)
 
@@ -156,27 +169,21 @@ def anime_episodes_kitsu(title, next=None):
     Returns all episodes of an Anime using Anime title.
     """
 
-    ic(title)
-
     if next == None:
         URL = f"https://kitsu.io/api/edge/anime?filter[text]={title}"
-        r = requests.get(url = URL)
-        #ic((r.json())['data'][0])
-        URL = (r.json())['data'][0]['relationships']['episodes']['links']['related']
+        r = (requests.get(url = URL)).json()
+        URL = r['data'][0]['relationships']['episodes']['links']['related']
 
         r = requests.get(url = f'{URL}?page%5Blimit%5D=20')
     else:
-        #URL = (r.json())['data'][0]['relationships']['episodes']['links']['related']
         r = requests.get(url = next)
 
-    #print(json.dumps(r.json(), indent=4, sort_keys=True))
-
-    for eps in (r.json())['data']:
+    for eps in r['data']:
         all_episodes.append(eps['attributes']['canonicalTitle'])
         all_ep_no.append(str(eps['attributes']['number']))
 
-    if 'next' in (r.json())['links'].keys():
-        anime_episodes_kitsu(title, (r.json())['links']['next'])
+    if 'next' in r['links'].keys():
+        anime_episodes_kitsu(title, r['links']['next'])
 
     final_all_eps = copy.deepcopy(all_episodes) 
     final_ep_no = copy.deepcopy(all_ep_no) 
@@ -185,7 +192,6 @@ def anime_episodes_kitsu(title, next=None):
     del all_ep_no[:]
 
     return final_ep_no, final_all_eps
-    #print(json.dumps((r.json())['data'][0]['attributes']['canonicalTitle'], indent=4, sort_keys=True))
 
 def format_zeros(number, max_number=1):
 
@@ -254,15 +260,7 @@ def filename_fix_existing(filename, dirname):
     return '%s (%d).%s' % (name, idx, ext)
 
 
-def rename(dir, pattern, episodes, dir_title, episode_format, season_number='', season_part='', season_title='', season_preifx='', episode_prefix='', part_prefix='', seperator=''):
-
-    if int(season_part) < 1:
-        season_part = ''
-        part_prefix = ''
-
-    if int(season_number) < 1:
-        season_number = ''
-        season_preifx = ''
+def rename(dir, pattern, episodes, dir_title, episode_format, title_metadata):
 
     """
     Renames files using path, file pattern and episodes fetched using anime_episodes()
@@ -270,7 +268,6 @@ def rename(dir, pattern, episodes, dir_title, episode_format, season_number='', 
 
     pathAndFilenameList = (sorted(list(glob.iglob(os.path.join(dir, pattern)))))
 
-    console = Console()
     renderables = []
 
     ep_re = re.compile(r'([Ee][0-9]+)|([Ss][0-9]+[Ee][0-9]+)|([0-9]+)')
@@ -292,9 +289,12 @@ def rename(dir, pattern, episodes, dir_title, episode_format, season_number='', 
         title, ext = os.path.splitext(os.path.basename(pathAndFilename))
         episodeName = episodes[ep_no]
 
-        old_new[os.path.join(os.path.dirname(dir), dir_title)].update({f'E{ep_no} - {episodeName}{ext}':f'{title}{ext}'})
+        title_metadata.update({'episode_number': ep_no, 'episode_title': episodeName})
 
-        rename_string = episode_format.format(episode_number=ep_no, episode_title=episodeName, season_title=season_title, season_number=season_number, part_number=season_part, season_prefix=season_preifx, part_prefix=part_prefix, episode_prefix=episode_prefix, seperator=seperator)
+        rename_string = episode_format.format(**title_metadata)
+
+        
+        old_new[os.path.join(os.path.dirname(dir), dir_title)].update({f'{rename_string}{ext}':f'{title}{ext}'})
         
         os.rename(pathAndFilename, os.path.join(dir, f"{rename_string}{ext}"))
 
@@ -339,55 +339,3 @@ def walk_directory(directory: pathlib.Path, tree: Tree) -> None:
             text_filename.append(f" ({decimal(file_size)})", "blue")
             icon = "📺 " if path.suffix == ".mkv" else "📄 "
             tree.add(Text(icon) + text_filename)
-
-def user_input():
-
-    console = Console()
-
-    yes = {'yes','y'}
-    no = {'no','n'}
-
-    valid = False
-
-    console.print("\n[green]Proceed? (Y/N): ")
-
-    while (valid == False):
-
-        choice = input().lower()
-
-        if choice in yes:
-            valid = True
-        elif choice in no:
-            quit()
-        else:
-            console.print("\n[red]Please provide a valid input (Y/N): ")
-
-# def rename(dir, pattern, episodesList, epNo):
-
-#     iteration = 0
-#     count = 0
-#     pathAndFilenameList = (sorted(list(glob.iglob(os.path.join(dir, pattern)))))
-#     pathAndFilename = pathAndFilenameList[iteration]
-
-#     while((iteration <= len(pathAndFilenameList)-1) or (count <= (len(episodesList)-1))):
-#         pathAndFilename = pathAndFilenameList[iteration]
-
-#         title, ext = os.path.splitext(os.path.basename(pathAndFilename))
-
-#         print(episodesList[count])
-
-#         episodeName = episodesList[count]
-#         epRenameNo = epNo[count]
-
-#         #Rename the EP if the EP is present (determined by EP No. of original file name)
-
-#         #fuzzy = fuzz.ratio(title, f"E{epRenameNo}")
-
-#         fuzzy=100
-
-#         if (fuzzy > 50):
-#             os.rename(pathAndFilename, os.path.join(dir, f"E{epRenameNo} - {episodeName}{ext}"))
-#             iteration = iteration + 1
-#             print (f"From: {title}\nTo:   E{epRenameNo} - {episodeName}\n")
-
-#         count = count + 1

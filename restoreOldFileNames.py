@@ -10,6 +10,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.columns import Columns
 from rich.tree import Tree
+from rich.prompt import Confirm, Prompt
 
 os.system('cls')
 
@@ -23,8 +24,6 @@ pathAndFilenameList = (sorted(list(glob.iglob(os.path.join(dir, r'*.json')))))
 
 anime_list = [os.path.splitext(os.path.basename(i))[0] for i in pathAndFilenameList]
 
-console.print("\n[b][u]Select a Backup File\n")
-
 table = Table()
 table.add_column("S. No", style="cyan")
 table.add_column("Anime", style="yellow")
@@ -34,11 +33,7 @@ for i, anime in enumerate(anime_list):
 
 console.print(table)
 
-print()
-selection = int(input())-1
-print()
-
-utils.user_input()
+selection = int(Prompt.ask("\n[b][u]Select a Backup File"))-1
 
 failed = False
 
@@ -47,7 +42,29 @@ with open(pathAndFilenameList[selection]) as f:
     f = json.load(f)
 
     rename_path = list(f.keys())[0]
+
+    if not os.path.exists(rename_path):
+        print()
+        console.print(f"[b][red]The directory [u]{rename_path}[not u] specified the backup file does not exist.\n\n[yellow]To fix this error, you may try renaming the Anime folder that you want to restore the filenames of to:\n{rename_path}\n\n[yellow]Alternatively you can try editing the [u]{anime_list[selection]}.json[not u] file to fix the issue.")
+        quit()
+
     new_titles = f[rename_path]
+
+    tree = Tree("[b][yellow]The selected backup file contains the following episode titles", style="bold")
+    for title in new_titles:
+        tree.add(new_titles[title])
+
+    print()
+    print(tree)
+    print()
+
+    choice = Confirm.ask("[green]Proceed to restore filename?")
+
+    if choice == False:
+        quit()
+
+    print()
+
     tree = Tree("[b][red]The following files were not found and hence they couldn't be renamed", style="bold")
     console.print("[b][u]Restoring File Names\n")
 
@@ -65,16 +82,13 @@ if failed == True:
     print(tree)
     print()
 
-try:
-    directory = os.path.abspath(rename_path)
-except IndexError:
-    print("[b]Usage:[/] python tree.py <DIRECTORY>")
-else:
-    tree = Tree(
-        f":open_file_folder: [link file://{directory}]{directory}",
-        guide_style="bold bright_blue",
-    )
-    utils.walk_directory(pathlib.Path(directory), tree)
-    print()
-    print(tree)
+
+directory = os.path.abspath(rename_path)
+tree = Tree(
+    f":open_file_folder: [link file://{directory}]{directory}",
+    guide_style="bold bright_blue",
+)
+utils.walk_directory(pathlib.Path(directory), tree)
+print()
+print(tree)
 
