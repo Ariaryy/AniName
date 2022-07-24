@@ -18,7 +18,6 @@ console = Console()
 
 console.print("[b][u]Path of the folder conatining old episode titles backup files:\n")
 dir = input()
-#dir = r'C:\Users\hmjoisa\Downloads\Media\Anime\TV\Haikyuu!! (2014-20)\Old Episode Titles'
 
 pathAndFilenameList = (sorted(list(glob.iglob(os.path.join(dir, r'*.json')))))
 
@@ -91,4 +90,3 @@ tree = Tree(
 utils.walk_directory(pathlib.Path(directory), tree)
 print()
 print(tree)
-

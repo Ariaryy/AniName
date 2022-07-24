@@ -41,8 +41,6 @@ if not os.path.exists(directory):
     console.print('[b][red]Directory does not exist. Please provide a valid directory.')
     quit()
 
-#directory = r"test dir"
-
 season_metadata_format = {
     'season_prefix': season_prefix,
     'part_prefix': part_prefix,
@@ -54,6 +52,7 @@ season_metadata_format = {
 
 anime = Anime(directory, season_lang, season_format, season_metadata_format)
 
+#TODO: Do not use conf file for listing on screen and backup file
 table = Table(title="[b][yellow]Anime(s) Found", box=box.ROUNDED, show_lines=True, highlight=True)
 
 table.add_column("Title", style="white")

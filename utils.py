@@ -5,6 +5,7 @@ import re
 from icecream import ic
 import copy
 from ratelimit import limits, sleep_and_retry
+import anitopy
 
 from rich import print
 from rich.console import Console
@@ -270,30 +271,25 @@ def rename(dir, pattern, episodes, dir_title, episode_format, title_metadata):
 
     renderables = []
 
-    ep_re = re.compile(r'([Ee][0-9]+)|([Ss][0-9]+[Ee][0-9]+)|([0-9]+)')
-    last_no_re = re.compile(r'(\d+)[^\d]*$')
-    first_ep = os.path.basename(pathAndFilenameList[0])
-    last_ep = os.path.basename(pathAndFilenameList[len(pathAndFilenameList)-1])
-    
-    ep_range = [re.search(last_no_re ,(re.search(ep_re, first_ep).group())).group(), re.search(last_no_re, (re.search(ep_re, last_ep).group())).group()]
-    ep_range = [format_zeros(i, len(pathAndFilenameList)) for i in ep_range]
-    
-    episodes_ar = sorted({i for i in episodes if int(i) >= int(ep_range[0]) and int(i) <= int(ep_range[1])})
-    
+    anitomy_dict = [(anitopy.parse(os.path.basename(i))) for i in pathAndFilenameList]
+    anitomy_dict = [i for i in anitomy_dict if 'episode_number' in i]
+
     old_new = {os.path.join(os.path.dirname(dir), dir_title): {}}
 
-    for i, ep_no in enumerate(episodes_ar):
-        
-        pathAndFilename = pathAndFilenameList[i]
+    for anitomy in anitomy_dict:
+
+        pathAndFilename = os.path.join(dir, anitomy['file_name'])
         
         title, ext = os.path.splitext(os.path.basename(pathAndFilename))
+
+        ep_no = format_zeros(anitomy['episode_number'], len(anitomy_dict))
+
         episodeName = episodes[ep_no]
 
         title_metadata.update({'episode_number': ep_no, 'episode_title': episodeName})
 
         rename_string = episode_format.format(**title_metadata)
 
-        
         old_new[os.path.join(os.path.dirname(dir), dir_title)].update({f'{rename_string}{ext}':f'{title}{ext}'})
         
         os.rename(pathAndFilename, os.path.join(dir, f"{rename_string}{ext}"))
