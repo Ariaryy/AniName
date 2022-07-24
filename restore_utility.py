@@ -2,8 +2,6 @@
 import glob, os, json, pathlib
 import utils
 
-from icecream import ic
-
 from rich import print
 from rich.table import Table
 from rich.console import Console

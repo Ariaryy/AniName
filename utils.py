@@ -2,7 +2,6 @@ import requests
 import json
 import glob, os, pathlib
 import re
-from icecream import ic
 import copy
 from ratelimit import limits, sleep_and_retry
 import anitopy

@@ -1,6 +1,5 @@
 import os, pathlib
 import utils
-from icecream import ic 
 from anime import Anime
 
 from rich import print as rprint

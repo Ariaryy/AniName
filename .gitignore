@@ -1,5 +1,4 @@
 /.vscode
 /__pycache__
-/Misc
+/misc
 /test.py
-/.gitignore
