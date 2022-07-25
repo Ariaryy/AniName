@@ -41,8 +41,13 @@ with open(pathAndFilenameList[selection]) as f:
     rename_path = list(f.keys())[0]
 
     if not os.path.exists(rename_path):
-        print()
-        console.print(f"[b][red]The directory [u]{rename_path}[not u] specified the backup file does not exist.\n\n[yellow]To fix this error, you may try renaming the Anime folder that you want to restore the filenames of to:\n{rename_path}\n\n[yellow]Alternatively you can try editing the [u]{anime_list[selection]}.json[not u] file to fix the issue.")
+        console.print(f"""
+        [b][red]The directory [u]{rename_path}[not u] specified the backup file does not exist.
+        
+        [yellow]To fix this error, you may try renaming the Anime folder that you want to restore the filenames of to:
+        {rename_path}
+        
+        [yellow]Alternatively you can try editing the [u]{anime_list[selection]}.json[not u] file to fix the issue.""")  
         quit()
 
     new_titles = f[rename_path]

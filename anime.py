@@ -1,7 +1,6 @@
 import os
 import utils
 import re
-import copy
 
 class Anime:
 
@@ -9,10 +8,10 @@ class Anime:
     Extracts Anime information from a directory containing Anime Seasons/Episodes
     """
 
-    def __init__(self, path, season_lang, season_format, season_metadata):
+    def __init__(self, path):
 
         self.noSeasons = False
-        self.file_titles = {}
+        self.anime_display_titles = {}
         self.anime_titles = []
         self.mal_ids = []
         self.seasons = []
@@ -52,16 +51,14 @@ class Anime:
             self.season_nos.append(utils.format_zeros(str(season)))
             self.part_nos.append(utils.format_zeros(str(part)))
 
-            anime_title = utils.anime_title(self.mal_ids[i], season_lang)
-
-            copied_meta_data = copy.deepcopy(season_metadata)
+            anime_title = utils.anime_title(self.mal_ids[i])
             
-            file_title = utils.format_season(anime_title, season_format, copied_meta_data, int(season), int(part))
+            anime_display_title = utils.format_season(anime_title, int(season), int(part), True)
 
             self.anime_titles.append(anime_title)
-            self.file_titles.update({id:file_title})
+            self.anime_display_titles.update({id:anime_display_title})
 
-    def get_episodes(self, mal_id, episode_lang):
+    def get_episodes(self, mal_id):
 
         """
         Returns titles for all episodes in an Anime using MyAnimeList ID
@@ -72,7 +69,7 @@ class Anime:
         ep_nos = []
         ep_titles = []
 
-        ep_nos, ep_titles = (utils.anime_episodes(mal_id, episode_lang))
+        ep_nos, ep_titles = (utils.anime_episodes(mal_id))
 
         for i, ep_no in enumerate(ep_nos):
             self.episodes[mal_id].update({utils.format_zeros(ep_no, len(ep_nos)): ep_titles[i]})

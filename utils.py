@@ -5,6 +5,7 @@ import re
 import copy
 from ratelimit import limits, sleep_and_retry
 import anitopy
+import settings
 
 from rich import print
 from rich.console import Console
@@ -38,7 +39,8 @@ def parse_folder(folder_name):
 
         return var[0], var[1], var[2]
 
-    console.print("[b][red]Invalid folder formatting.\n[yellow]Learn more about folder formatting: [blue]https://github.com/AbhiramH427/AniName")
+    console.print("""[b][red]Invalid folder formatting.
+    [yellow]Learn more about folder formatting: [blue]https://github.com/AbhiramH427/AniName""")
     quit()
 
 @sleep_and_retry
@@ -75,55 +77,51 @@ def anime_search(title):
     anime_title = (r['data'][0]['title'])
     return mal_id, anime_title
 
-def format_season(anime_title, format, season_metadata, season=0, part=0):
+def format_season(anime_title, season=0, part=0, display_mode=False):
 
     """
     Formats Anime season titles in the format provided in the config file.
     """
 
-    season_metadata['season_title'] = anime_title
+
+    season_prefs = copy.deepcopy(settings.season_metadata_format)
+
+    season_prefs['season_title'] = anime_title
 
     if (int(season) < 1):
-        season_metadata['season_prefix'] = ''
-        season_metadata['seperator'] = ''
-
-    """
-    season_metadata = {
-        'season_prefix': season_prefix,
-        'part_prefix': part_prefix,
-        'seperator': seperator,
-        'season_number': '',
-        'season_title': '',
-        'part_number': '',
-    }
-    """
+        season_prefs['season_prefix'] = ''
+        season_prefs['seperator'] = ''
 
     if (int(part) < 1):
-        season_metadata['part_prefix'] = ''
+        season_prefs['part_prefix'] = ''
 
     if (int(season) >= 1):
-        season_metadata['season_number'] = format_zeros(str(season))
+        season_prefs['season_number'] = format_zeros(str(season))
 
     if (int(part) >= 1):
-        season_metadata['season_number'] = format_zeros(str(season))
-        season_metadata['part_number'] = format_zeros(str(part))
-    
-    season_name = format.format(**season_metadata)
+        season_prefs['season_number'] = format_zeros(str(season))
+        season_prefs['part_number'] = format_zeros(str(part))
+    if display_mode == True:
+        season_name = settings.season_display_format.format(**season_prefs)
+    else:
+        season_name = settings.season_format.format(**season_prefs)
 
     return season_name
 
-def anime_title(mal_id, language):
+def anime_title(mal_id):
 
     """
     Returns Anime Title using MyAnimeList ID.
     """
 
-    if language == 'romanji':
-        language = 'title'
-    elif language == 'japanese':
-        language = 'title_japanese'
+    season_lang = copy.deepcopy(settings.season_lang)
+
+    if season_lang == 'romanji':
+        season_lang = 'title'
+    elif season_lang == 'japanese':
+        season_lang = 'title_japanese'
     else:
-        language = 'title_english'
+        season_lang = 'title_english'
 
     r = fetch_url(f"https://api.jikan.moe/v4/anime/{mal_id}")
 
@@ -135,11 +133,11 @@ def anime_title(mal_id, language):
         console.print('[b][red]Anime types except TV are not supported.')
         quit()
 
-    title = (r['data'][language])
+    title = (r['data'][season_lang])
 
     return title
 
-def anime_episodes(mal_id, episode_lang, page=1):
+def anime_episodes(mal_id, page=1):
 
     """
     Returns a dictonary of episodes of an Anime using MyAnimeList ID.
@@ -156,42 +154,12 @@ def anime_episodes(mal_id, episode_lang, page=1):
 
     if r['pagination']['has_next_page'] == True:
         page += 1
-        anime_episodes(mal_id, episode_lang, page)
+        anime_episodes(mal_id, page)
 
     final_all_eps = copy.deepcopy(all_episodes) 
     del all_episodes[:]
 
-    return extract_episodes(final_all_eps, episode_lang) 
-
-def anime_episodes_kitsu(title, next=None):
-
-    """
-    Returns all episodes of an Anime using Anime title.
-    """
-
-    if next == None:
-        URL = f"https://kitsu.io/api/edge/anime?filter[text]={title}"
-        r = (requests.get(url = URL)).json()
-        URL = r['data'][0]['relationships']['episodes']['links']['related']
-
-        r = requests.get(url = f'{URL}?page%5Blimit%5D=20')
-    else:
-        r = requests.get(url = next)
-
-    for eps in r['data']:
-        all_episodes.append(eps['attributes']['canonicalTitle'])
-        all_ep_no.append(str(eps['attributes']['number']))
-
-    if 'next' in r['links'].keys():
-        anime_episodes_kitsu(title, r['links']['next'])
-
-    final_all_eps = copy.deepcopy(all_episodes) 
-    final_ep_no = copy.deepcopy(all_ep_no) 
-
-    del all_episodes[:]
-    del all_ep_no[:]
-
-    return final_ep_no, final_all_eps
+    return extract_episodes(final_all_eps) 
 
 def format_zeros(number, max_number=1):
 
@@ -214,7 +182,9 @@ def format_punctuations(string):
 
     return string
 
-def extract_episodes(episodes_data, episode_lang):
+def extract_episodes(episodes_data):
+
+    episode_lang = copy.deepcopy(settings.episode_lang)
 
     if episode_lang == 'romanji':
         episode_lang = 'title_romanji'
@@ -260,7 +230,7 @@ def filename_fix_existing(filename, dirname):
     return '%s (%d).%s' % (name, idx, ext)
 
 
-def rename(dir, pattern, episodes, dir_title, episode_format, title_metadata):
+def rename(dir, pattern, episodes, dir_title):
 
     """
     Renames files using path, file pattern and episodes fetched using anime_episodes()
@@ -270,7 +240,15 @@ def rename(dir, pattern, episodes, dir_title, episode_format, title_metadata):
 
     renderables = []
 
-    anitomy_dict = [(anitopy.parse(os.path.basename(i))) for i in pathAndFilenameList]
+    regexp = re.compile(r'([EeSsPp][\d]+)')
+
+    #Adds a space between Season Episode and Part numbers so that Anitomy doesn't fail
+    anitomy_dict = [os.path.basename(re.sub(regexp, r'\1 ', i)) for i in pathAndFilenameList]
+    anitomy_dict = [(anitopy.parse(i)) for i in anitomy_dict]
+
+    for i, file in enumerate(pathAndFilenameList):
+        anitomy_dict[i]['file_name'] = os.path.basename(file)
+
     anitomy_dict = [i for i in anitomy_dict if 'episode_number' in i]
 
     old_new = {os.path.join(os.path.dirname(dir), dir_title): {}}
@@ -285,9 +263,11 @@ def rename(dir, pattern, episodes, dir_title, episode_format, title_metadata):
 
         episodeName = episodes[ep_no]
 
-        title_metadata.update({'episode_number': ep_no, 'episode_title': episodeName})
+        ep_title_prefs = copy.deepcopy(settings.ep_prefs)
 
-        rename_string = episode_format.format(**title_metadata)
+        ep_title_prefs.update({'episode_number': ep_no, 'episode_title': episodeName})
+
+        rename_string = settings.episode_format.format(**ep_title_prefs)
 
         old_new[os.path.join(os.path.dirname(dir), dir_title)].update({f'{rename_string}{ext}':f'{title}{ext}'})
         
@@ -296,7 +276,7 @@ def rename(dir, pattern, episodes, dir_title, episode_format, title_metadata):
         renderables.append(Panel(f"[b]{title}\n\n[green]{rename_string}"))
 
     console.print(Columns(renderables))
-    oldfilespath = os.path.join(os.path.dirname(dir), 'Episode Titles Backup')
+    oldfilespath = os.path.join(os.path.dirname(dir), 'ORIGINAL_EPISODE_FILENAMES')
 
     if not os.path.exists(oldfilespath):
         os.makedirs(oldfilespath)

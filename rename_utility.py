@@ -1,64 +1,39 @@
-import os, pathlib
-import utils
-from anime import Anime
+import os, pathlib, copy
 
 from rich import print as rprint
 from rich.table import Table
 from rich.console import Console
 from rich.tree import Tree
 from rich import box
-from rich.prompt import Confirm
+from rich.prompt import Confirm, Prompt
 
-import configparser
+import settings
+from anime import Anime
+import utils
 
-config_file = configparser.ConfigParser()
-config_file.read("conf.ini", encoding='utf8')
-
-episode_format = config_file['formatting']['episode_format']
-episode_lang = config_file['preference']['episode_title']
-episode_prefix = config_file['preference']['episode_prefix']
-
-season_format = config_file['formatting']['season_format']
-season_lang = config_file['preference']['season_title']
-season_prefix = config_file['preference']['season_prefix']
-
-part_prefix = config_file['preference']['part_prefix']
-
-seperator = (config_file['preference']['seperator']).replace('"', '')
+settings.init()
+console = Console()
 
 os.system('cls')
 
-console = Console()
+console.print("[b]Please Make sure you follow the guide on https://github.com/AbhiramH427/AniName before using this utility.\n")
 
-console.print("[b]Please Make sure you follow the guide on https://github.com/AbhiramH427/AniName before using the rename utility!\n")
-
-console.print("[b][u]Directory path of Anime:\n")
-directory = input()
+directory = Prompt.ask("[b][u]Directory path of Anime")
 print()
 
 if not os.path.exists(directory):
     console.print('[b][red]Directory does not exist. Please provide a valid directory.')
     quit()
 
-season_metadata_format = {
-    'season_prefix': season_prefix,
-    'part_prefix': part_prefix,
-    'seperator': seperator,
-    'season_number': '',
-    'season_title': '',
-    'part_number': '',
-}
+anime = Anime(directory)
 
-anime = Anime(directory, season_lang, season_format, season_metadata_format)
-
-#TODO: Do not use conf file for listing on screen and backup file
 table = Table(title="[b][yellow]Anime(s) Found", box=box.ROUNDED, show_lines=True, highlight=True)
 
 table.add_column("Title", style="white")
 table.add_column("MAL ID")
 
-for i, title in enumerate(anime.file_titles):
-    table.add_row(anime.file_titles[title], f'[b][blue][link https://myanimelist.net/anime/{anime.mal_ids[i]}]{anime.mal_ids[i]}')
+for i, title in enumerate(anime.anime_display_titles):
+    table.add_row(anime.anime_display_titles[title], f'[b][blue][link https://myanimelist.net/anime/{anime.mal_ids[i]}]{anime.mal_ids[i]}')
 
 console.print(table)
 
@@ -74,6 +49,8 @@ for i, path in enumerate(anime.full_paths):
     season_number = anime.season_nos[i]
     season_part = anime.part_nos[i]
 
+    season_prefix = copy.deepcopy(settings.season_prefix)
+    part_prefix = copy.deepcopy(settings.part_prefix)
     
     if int(season_part) < 1:
         season_part = ''
@@ -84,28 +61,30 @@ for i, path in enumerate(anime.full_paths):
         season_prefix = ''
 
     console.print(f"\n[h1][b][u][yellow]Renaming: {season_title}\n")
-    anime.get_episodes(anime.mal_ids[i], episode_lang)
+    anime.get_episodes(anime.mal_ids[i])
 
     episodes = anime.episodes[anime.mal_ids[i]]
-    file_titles = anime.file_titles[anime.anime_dirs[i]]
+    anime_display_title = anime.anime_display_titles[anime.anime_dirs[i]]
     pattern = r'*.mkv'
 
-    episode_meta_data_format = {
+    ep_prefs_data = {
         'season_number': season_number,
         'part_number': season_part,
         'season_title': season_title,
         'season_prefix': season_prefix,
-        'episode_prefix': episode_prefix,
+        'episode_prefix': settings.episode_prefix,
         'part_prefix': part_prefix,
-        'seperator': seperator
+        'seperator': settings.seperator
     }
 
-    utils.rename(path, pattern, episodes, file_titles, episode_format, episode_meta_data_format)
+    settings.set_ep_prefs(ep_prefs_data)
+
+    utils.rename(path, pattern, episodes, anime_display_title)
 
 print()
 
 if anime.noSeasons == True:
-    directory = os.path.join(os.path.dirname(directory), utils.format_punctuations(anime.file_titles[anime.anime_dirs[0]]))
+    directory = os.path.join(os.path.dirname(directory), utils.format_punctuations(anime.anime_display_titles[anime.anime_dirs[0]]))
 directory = os.path.abspath(directory)
 
 if not os.path.exists(directory):
@@ -120,5 +99,10 @@ utils.walk_directory(pathlib.Path(directory), tree)
 print()
 rprint(tree)
 
-oldfilespath = os.path.join(os.path.dirname(path), 'Episode Titles Backup')
-console.print(f'\n[b][yellow]Original file names are backed up in this folder\n[link file://{oldfilespath}]{oldfilespath}\n\nIf you wish to restore the orignal file names, use the restore utility.')
+oldfilespath = os.path.join(os.path.dirname(path), 'ORIGINAL_EPISODE_FILENAMES')
+console.print(f"""
+[b][yellow]Original filenames are backed up in this folder
+[link "file://{oldfilespath}"]{oldfilespath}[/link "file://{oldfilespath}"]
+
+If you wish to restore the orignal file names, use the restore utility.
+""")
