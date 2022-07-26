@@ -1,6 +1,6 @@
 import requests
 import json
-import glob, os, pathlib
+import glob, os, pathlib, sys
 import re
 import copy
 from ratelimit import limits, sleep_and_retry
@@ -18,14 +18,9 @@ from rich.text import Text
 
 console = Console()
 
-global all_episodes
-global all_ep_no
-all_ep_no = []
-all_episodes = []
+def parse_dir(dir_basename):
 
-def parse_folder(folder_name):
-
-    var = re.search(r'^([0-9]+)$|^([0-9]+)([Ss][0-9]+)([Pp][0-9]+)?$', folder_name)
+    var = re.search(r'^([\d]+)$|^([\d]+)([Ss][\d]+)([Pp][\d]+)?$', dir_basename)
 
     if var != None:
 
@@ -39,9 +34,7 @@ def parse_folder(folder_name):
 
         return var[0], var[1], var[2]
 
-    console.print("""[b][red]Invalid folder formatting.
-    [yellow]Learn more about folder formatting: [blue]https://github.com/AbhiramH427/AniName""")
-    quit()
+    return None
 
 @sleep_and_retry
 @limits(calls=3, period=4)
@@ -55,8 +48,9 @@ def fetch_url(base_url, params=None):
     r = requests.get(base_url, params=params) if params == None else requests.get(base_url)
 
     if not r.status_code == 200:
-        console.print('[b][red]The provided the MyAnimeList ID is invalid.')
-        quit()
+        console.print('[b][red]The provided the MyAnimeList ID is invalid.\n')
+        os.system('pause')
+        sys.exit()
 
     return r.json()
 
@@ -126,40 +120,39 @@ def anime_title(mal_id):
     r = fetch_url(f"https://api.jikan.moe/v4/anime/{mal_id}")
 
     if not 'data' in r:
-        console.print(f'[b][red]There was an error while fetching the Anime title. Double check the provided MyAnimeList ID: {mal_id}')
-        quit()
+        console.print(f'[b][red]There was an error while fetching the Anime title. Double check the provided MyAnimeList ID: {mal_id}\n')
+        os.system('pause')
+        sys.exit()
 
     if not r['data']['type'] == "TV":
-        console.print('[b][red]Anime types except TV are not supported.')
-        quit()
+        console.print('[b][red]Anime types except TV are not supported.\n')
+        os.system('pause')
+        sys.exit()
 
     title = (r['data'][season_lang])
 
     return title
 
-def anime_episodes(mal_id, page=1):
+def anime_episodes(mal_id, page=1, episode_list=[]):
 
     """
-    Returns a dictonary of episodes of an Anime using MyAnimeList ID.
-    On failure, fetches episodes from Kitsu API using Anime Title.
+    Returns list of episode numbers and titles of an Anime using MyAnimeList ID.
     """
 
     r = (fetch_url(f"https://api.jikan.moe/v4/anime/{mal_id}/episodes", {"page": page}))
 
     if not 'data' in r:
-        console.print(f'[b][red]There was an error while fetching the episodes. Double check the provided MyAnimeList ID {mal_id}')
-        quit()
+        console.print(f'[b][red]There was an error while fetching the episodes. Double check the provided MyAnimeList ID {mal_id}\n')
+        os.system('pause')
+        sys.exit()
 
-    all_episodes.append(r['data'])
+    episode_list.append(r['data'])
 
     if r['pagination']['has_next_page'] == True:
         page += 1
-        anime_episodes(mal_id, page)
+        anime_episodes(mal_id, page, episode_list)
 
-    final_all_eps = copy.deepcopy(all_episodes) 
-    del all_episodes[:]
-
-    return extract_episodes(final_all_eps) 
+    return extract_episodes(episode_list) 
 
 def format_zeros(number, max_number=1):
 
@@ -230,32 +223,34 @@ def filename_fix_existing(filename, dirname):
     return '%s (%d).%s' % (name, idx, ext)
 
 
-def rename(dir, pattern, episodes, dir_title):
+def rename(dir, rename_dir, pattern, episodes, dir_title):
 
     """
     Renames files using path, file pattern and episodes fetched using anime_episodes()
     """
 
-    pathAndFilenameList = (sorted(list(glob.iglob(os.path.join(dir, pattern)))))
+    pathAndFilenameList = (sorted(list(glob.iglob(os.path.join(rename_dir, pattern)))))
 
     renderables = []
 
-    regexp = re.compile(r'([EeSsPp][\d]+)')
+    anitomy_options = {'allowed_delimiters': ' -_.&+,|'}
 
-    #Adds a space between Season Episode and Part numbers so that Anitomy doesn't fail
-    anitomy_dict = [os.path.basename(re.sub(regexp, r'\1 ', i)) for i in pathAndFilenameList]
-    anitomy_dict = [(anitopy.parse(i)) for i in anitomy_dict]
+    regexp = re.compile(r'([Pp][\d]+)')
+
+    #Removes part number so that Anitomy doesn't fail
+    anitomy_dict = [os.path.basename(re.sub(regexp, '', i)) for i in pathAndFilenameList]
+    anitomy_dict = [(anitopy.parse(i, options=anitomy_options)) for i in anitomy_dict]
 
     for i, file in enumerate(pathAndFilenameList):
         anitomy_dict[i]['file_name'] = os.path.basename(file)
 
     anitomy_dict = [i for i in anitomy_dict if 'episode_number' in i]
 
-    old_new = {os.path.join(os.path.dirname(dir), dir_title): {}}
+    old_new = {os.path.join(os.path.dirname(rename_dir), dir_title): {}}
 
     for anitomy in anitomy_dict:
 
-        pathAndFilename = os.path.join(dir, anitomy['file_name'])
+        pathAndFilename = os.path.join(rename_dir, anitomy['file_name'])
         
         title, ext = os.path.splitext(os.path.basename(pathAndFilename))
 
@@ -269,19 +264,22 @@ def rename(dir, pattern, episodes, dir_title):
 
         rename_string = settings.episode_format.format(**ep_title_prefs)
 
-        old_new[os.path.join(os.path.dirname(dir), dir_title)].update({f'{rename_string}{ext}':f'{title}{ext}'})
-        
-        os.rename(pathAndFilename, os.path.join(dir, f"{rename_string}{ext}"))
+        old_new[os.path.join(os.path.dirname(rename_dir), dir_title)].update({f'{rename_string}{ext}':f'{title}{ext}'})
 
         renderables.append(Panel(f"[b]{title}\n\n[green]{rename_string}"))
+
+        try:
+            os.rename(pathAndFilename, os.path.join(rename_dir, f"{rename_string}{ext}"))
+        except:
+            pass
+
+    os.rename(rename_dir, os.path.join(os.path.dirname(rename_dir), format_punctuations(dir_title)))
 
     console.print(Columns(renderables))
     oldfilespath = os.path.join(os.path.dirname(dir), 'ORIGINAL_EPISODE_FILENAMES')
 
     if not os.path.exists(oldfilespath):
         os.makedirs(oldfilespath)
-
-    os.rename(dir, os.path.join(os.path.dirname(dir), format_punctuations(dir_title)))
 
     with open(os.path.join(oldfilespath, filename_fix_existing(f"{format_punctuations(dir_title)}.json", oldfilespath)), "w", encoding="utf-8") as f:
         f.write(json.dumps(old_new, indent = 4))
@@ -314,3 +312,22 @@ def walk_directory(directory: pathlib.Path, tree: Tree) -> None:
             text_filename.append(f" ({decimal(file_size)})", "blue")
             icon = "📺 " if path.suffix == ".mkv" else "📄 "
             tree.add(Text(icon) + text_filename)
+
+def ani_parse_dir(directory: pathlib.Path, check_init_path=False, parsed_paths=[]) -> None:
+
+    paths = sorted(pathlib.Path(directory).iterdir())
+
+    if (check_init_path == True):
+        if parse_dir(os.path.basename(directory)) != None:
+                parsed_paths.append(directory)
+
+    for path in paths:
+        # Remove hidden files
+        if path.name.startswith("."):
+            continue
+        if path.is_dir():
+            if parse_dir(path.name) != None:
+                parsed_paths.append(path)
+            ani_parse_dir(path, False, parsed_paths)
+
+    return parsed_paths

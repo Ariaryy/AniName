@@ -1,5 +1,5 @@
 
-import glob, os, json, pathlib
+import glob, os, json, pathlib, sys
 import utils
 
 from rich import print
@@ -42,13 +42,14 @@ with open(pathAndFilenameList[selection]) as f:
 
     if not os.path.exists(rename_path):
         console.print(f"""
-        [b][red]The directory [u]{rename_path}[not u] specified the backup file does not exist.
+[b][red]The directory of which the filenames are to be restored does not exist.
         
-        [yellow]To fix this error, you may try renaming the Anime folder that you want to restore the filenames of to:
-        {rename_path}
+[yellow]Please make sure the following path exists:
+[u]{rename_path}[not u]
         
-        [yellow]Alternatively you can try editing the [u]{anime_list[selection]}.json[not u] file to fix the issue.""")  
-        quit()
+[yellow]Alternatively, you can try editing the path in the [u]{anime_list[selection]}.json[not u] file to fix the issue.\n""")
+        os.system('pause')
+        sys.exit()
 
     new_titles = f[rename_path]
 
@@ -63,7 +64,7 @@ with open(pathAndFilenameList[selection]) as f:
     choice = Confirm.ask("[green]Proceed to restore filename?")
 
     if choice == False:
-        quit()
+        sys.exit()
 
     print()
 
@@ -93,3 +94,5 @@ tree = Tree(
 utils.walk_directory(pathlib.Path(directory), tree)
 print()
 print(tree)
+print()
+os.system('pause')

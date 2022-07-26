@@ -1,6 +1,8 @@
-import os
+import os, re, sys
 import utils
-import re
+from rich.console import Console
+
+console = Console()
 
 class Anime:
 
@@ -19,26 +21,20 @@ class Anime:
         self.part_nos = []
         self.full_paths = []
 
-        #RegExp for filtering out Anime Folders
-        anime_dir_re = re.compile(r'(^[0-9]+[Ss][0-9]+)|(^[0-9]+)')
+        self.full_paths = utils.ani_parse_dir(path, True)
 
-        dirscan = os.scandir(path)
-        subdirs = [i.name for i in dirscan if i.is_dir()]
+        if len(self.full_paths) == 0:
+            console.print(
+            """[b][red]No directories matching the scan format were found.\n[yellow]Learn more about directory formatting: [blue]https://github.com/AbhiramH427/AniName\n""")
+            os.system('pause')
+            sys.exit()
 
-        #Filtering out using RegExp
-        self.anime_dirs = sorted([i for i in subdirs if anime_dir_re.match(i)])
+        self.anime_dirs = [os.path.basename(i) for i in self.full_paths]
 
-        #len(anime_dirs) == 0 imples that the Anime does not have season folders, continues to check for basepath
-        if (len(self.anime_dirs) == 0):
-            self.anime_dirs = [os.path.basename(path)]
-            path = os.path.dirname(path)
-            self.noSeasons = True
-
-        for i in self.anime_dirs:
-            mal_id, season_no, part_no = utils.parse_folder(i)
+        for i in self.full_paths:
+            mal_id, season_no, part_no = utils.parse_dir(os.path.basename(i))
             self.mal_ids.append(mal_id)
             self.seasons.append(f'{season_no}{part_no}')
-            self.full_paths.append(os.path.join(path, i))
 
         #Fetching Anime Titles
         for i, id in enumerate(self.anime_dirs):

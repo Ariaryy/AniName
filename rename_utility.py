@@ -1,4 +1,4 @@
-import os, pathlib, copy
+import os, copy, sys
 
 from rich import print as rprint
 from rich.table import Table
@@ -22,8 +22,9 @@ directory = Prompt.ask("[b][u]Directory path of Anime")
 print()
 
 if not os.path.exists(directory):
-    console.print('[b][red]Directory does not exist. Please provide a valid directory.')
-    quit()
+    console.print('[b][red]Directory does not exist. Please provide a valid directory.\n')
+    os.system('pause')
+    sys.exit()
 
 anime = Anime(directory)
 
@@ -41,7 +42,9 @@ print()
 choice = Confirm.ask("[green]Proceed?")
 
 if choice == False:
-    quit()
+    sys.exit()
+
+new_dirs = []
 
 for i, path in enumerate(anime.full_paths):
 
@@ -79,30 +82,27 @@ for i, path in enumerate(anime.full_paths):
 
     settings.set_ep_prefs(ep_prefs_data)
 
-    utils.rename(path, pattern, episodes, anime_display_title)
+    new_dirs.append(os.path.join(os.path.dirname(path), utils.format_punctuations(anime_display_title)))
+
+    utils.rename(directory, path, pattern, episodes, anime_display_title)
 
 print()
 
-if anime.noSeasons == True:
-    directory = os.path.join(os.path.dirname(directory), utils.format_punctuations(anime.anime_display_titles[anime.anime_dirs[0]]))
-directory = os.path.abspath(directory)
+for dirs in new_dirs:
+    tree = Tree(
+        f":open_file_folder: [link file://{dirs}]{dirs}",
+        guide_style="bold bright_blue",
+    )
+    utils.walk_directory(dirs, tree)
+    print()
+    rprint(tree)
 
-if not os.path.exists(directory):
-    console.print('[b][red]There was an error in getting the path of the Episode Titles Backup folder.')
-    quit()
-
-tree = Tree(
-    f":open_file_folder: [link file://{directory}]{directory}",
-    guide_style="bold bright_blue",
-)
-utils.walk_directory(pathlib.Path(directory), tree)
-print()
-rprint(tree)
-
-oldfilespath = os.path.join(os.path.dirname(path), 'ORIGINAL_EPISODE_FILENAMES')
+oldfilespath = os.path.join(os.path.dirname(directory), 'ORIGINAL_EPISODE_FILENAMES')
 console.print(f"""
 [b][yellow]Original filenames are backed up in this folder
 [link "file://{oldfilespath}"]{oldfilespath}[/link "file://{oldfilespath}"]
 
 If you wish to restore the orignal file names, use the restore utility.
-""")
+\n""")
+
+os.system('pause')
