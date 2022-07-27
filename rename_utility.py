@@ -28,6 +28,7 @@ if not os.path.exists(directory):
 
 anime = Anime(directory)
 
+print()
 table = Table(title="[b][yellow]Anime(s) Found", box=box.ROUNDED, show_lines=True, highlight=True)
 
 table.add_column("Title", style="white")
@@ -90,7 +91,7 @@ print()
 
 for dirs in new_dirs:
     tree = Tree(
-        f":open_file_folder: [link file://{dirs}]{dirs}",
+        f":open_file_folder: [link file://{os.path.abspath(dirs)}]{dirs}",
         guide_style="bold bright_blue",
     )
     utils.walk_directory(dirs, tree)
@@ -100,7 +101,7 @@ for dirs in new_dirs:
 oldfilespath = os.path.join(os.path.dirname(directory), 'ORIGINAL_EPISODE_FILENAMES')
 console.print(f"""
 [b][yellow]Original filenames are backed up in this folder
-[link "file://{oldfilespath}"]{oldfilespath}[/link "file://{oldfilespath}"]
+[link file://{os.path.abspath(oldfilespath)}]{oldfilespath}[/link file://{os.path.abspath(oldfilespath)}]
 
 If you wish to restore the orignal file names, use the restore utility.
 \n""")

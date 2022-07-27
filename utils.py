@@ -120,7 +120,7 @@ def anime_title(mal_id):
     r = fetch_url(f"https://api.jikan.moe/v4/anime/{mal_id}")
 
     if not 'data' in r:
-        console.print(f'[b][red]There was an error while fetching the Anime title. Double check the provided MyAnimeList ID: {mal_id}\n')
+        console.print(f'[b][red]There was an error while fetching the Anime title. Make sure that the provided MyAnimeList ID ({mal_id}) is valid.\n')
         os.system('pause')
         sys.exit()
 
@@ -142,7 +142,7 @@ def anime_episodes(mal_id, page=1, episode_list=[]):
     r = (fetch_url(f"https://api.jikan.moe/v4/anime/{mal_id}/episodes", {"page": page}))
 
     if not 'data' in r:
-        console.print(f'[b][red]There was an error while fetching the episodes. Double check the provided MyAnimeList ID {mal_id}\n')
+        console.print(f'[b][red]There was an error while fetching the episodes. Make sure that the provided MyAnimeList ID ({mal_id}) is valid.\n')
         os.system('pause')
         sys.exit()
 

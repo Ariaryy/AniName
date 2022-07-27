@@ -42,7 +42,7 @@ with open(pathAndFilenameList[selection]) as f:
 
     if not os.path.exists(rename_path):
         console.print(f"""
-[b][red]The directory of which the filenames are to be restored does not exist.
+[b][red]The directory of the files whose names are to be restored does not exist.
         
 [yellow]Please make sure the following path exists:
 [u]{rename_path}[not u]

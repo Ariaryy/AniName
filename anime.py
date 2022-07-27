@@ -1,6 +1,7 @@
 import os, re, sys
 import utils
 from rich.console import Console
+from rich.progress import track
 
 console = Console()
 
@@ -37,7 +38,7 @@ class Anime:
             self.seasons.append(f'{season_no}{part_no}')
 
         #Fetching Anime Titles
-        for i, id in enumerate(self.anime_dirs):
+        for i, id in enumerate(track(self.anime_dirs, description="Fetching Anime(s):")):
             season = re.search(r'(?<=^[Ss])([0-9]+)', self.seasons[i])
             part = re.search(r'(?<=[Pp])([0-9]+)', self.seasons[i])
 
