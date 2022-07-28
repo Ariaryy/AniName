@@ -1,4 +1,4 @@
-![AniName Banner](https://user-images.githubusercontent.com/69304096/178553804-76c53186-01f1-4900-8927-6ff427de1c26.png)
+![AniName](https://user-images.githubusercontent.com/69304096/181575871-d10d664f-1210-417c-b042-abb8b6019fc7.png)
 
 # AniName - A better way to rename Anime
 
