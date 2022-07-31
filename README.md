@@ -51,14 +51,10 @@ The <b>Season Number</b> and <b>Part Number</b> are completely optional.
 You can retrieve the <b>MyAnimeList</b> ID by following these steps:
 * Visit [MyAnimeList]("https://myanimelist.net/")
 * Use the search bar to find and open your Anime.
-* The URL should look something like this (pay attention to the ID):
-<br>
-`https://myanimelist.net/anime/ID/Anime-Name`
-<br><br>
-As an example, here is the URL for the anime <b>Attack on Titan</b>:
-<br>
-https://myanimelist.net/anime/16498/Shingeki_no_Kyojin
-<br>
+* The URL should look something like this (pay attention to the ID):  
+`https:​//myanimelist.net/anime/ID/Anime-Name`  
+As an example, here is the URL for the anime <b>Attack on Titan</b>:  
+https://myanimelist.net/anime/16498/Shingeki_no_Kyojin  
 The <b>MyAnimeList ID</b> is <b>16498</b>
 * The number (ID) in the URL is the <b>MyAnimeList ID</b>.
 
