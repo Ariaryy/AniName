@@ -44,23 +44,27 @@ To run this application you'll need [Python](https://www.python.org/downloads/) 
 
 ### Anime Folder Formatting
 
-In order for <b>Rename Utility</b> to recognize your Anime folder, rename it to the following format <b>(without the square brackets and spaces)</b>:
+In order for <b>Rename Utility</b> to recognize your Anime folder, rename it to the following format: <b>(without square brackets and spaces)</b>:
 
 `[MyAnimeList ID]` `S[Season Number]` `P[Part Number]`
 
-`S[Season Number]` and `P[Part Number]` are completely optional.
+Replace the text in the square brackets with the appropriate value (remove spaces).
 
-You can retrieve the <b>MyAnimeList</b> ID by following these steps:
-* Visit [MyAnimeList](https://myanimelist.net/)
-* Use the search bar to find and open your Anime.
+* `[MyAnimeList ID]`: ID of the Anime from [MyAnimeList.net](https://myanimelist.net/)
+* `S[Season Number]`: Season number of the Anime
+* `P[Part Number]`: Part number of the Anime
+
+`S[Season Number]` and `P[Part Number]` are optional. They are used to identify the season and part of the Anime, and rename the files accordingly.
+
+You can retrieve the <b>MyAnimeList ID</b> by following these steps:
+* Visit [MyAnimeList.net](https://myanimelist.net/)
+* Use the search bar to search and open your Anime in the site.
 * The URL should look something like this (pay attention to the ID):  
-`https:​//myanimelist.net/anime/ID/Anime-Name`  
-As an example, here is the URL for the anime <b>Attack on Titan</b>:  
+`https:​//myanimelist.net/anime/ID/Anime-Name`
+* The ID (number) in the URL is the <b>MyAnimeList ID</b>.
+* As an example, here is the URL for the anime <b>Attack on Titan</b>:  
 https://myanimelist.net/anime/16498/Shingeki_no_Kyojin  
-The <b>MyAnimeList ID</b> is <b>16498</b>
-* The number (ID) in the URL is the <b>MyAnimeList ID</b>.
-
-`S[Season Number]` and `P[Part Number]` are used to identify the season and part of the Anime, and the files are renamed accordingly.
+The <b>MyAnimeList ID</b> for the above example is <b>16498</b>
 
 Here are a few examples of Anime folder names:
 * Death Note: `1535`
@@ -99,14 +103,12 @@ The <b>conf.ini</b> file present in the app folder allows you to customize how y
 
 Available Variables:
 
-- `season_title`: Language of the season title
-- `episode_title`: Language of the episode title
-- `episode_prefix`: Prefix that can be used before episode number
-- `season_prefix`: Prefix that can be used before season number
-- `part_prefix`: Prefix that can be used before part number
-- `separator`: Character used as a delimiter (details below)
-
-Available <b>Language</b> values are `english`, `romanji` and `japanese`
+- `season_title`: Language of the season title. Can be `english`, `romanji` or `japanese`.
+- `episode_title`: Language of the episode title. Can be `english`, `romanji` or `japanese`.
+- `episode_prefix`: Prefix that can be used before episode number.
+- `season_prefix`: Prefix that can be used before season number.
+- `part_prefix`: Prefix that can be used before part number.
+- `separator`: Used as a delimiter (details below).
 
 Examples of <b>Attack on Titan</b> under different <b>Language</b> values:
 
@@ -114,9 +116,9 @@ Examples of <b>Attack on Titan</b> under different <b>Language</b> values:
 - `romanji`: Shingeki no Kyojin
 - `japanese`: 進撃の巨人
 
-The <b>separator</b> is a variable that can be used in the season and episode formatting options when you need to separate two variables.  
+The `separator` is a variable that can be used in the season and episode formatting options when you need to separate two variables.  
 
-It is made into a variable because, for instance, you might want to name the episodes of <b>Attack on Titan Season 1</b> as follows:
+It exists because, for instance, you might want to name the episodes of <b>Attack on Titan Season 1</b> as follows:
 <br>
 `S01E01 - To You Two Thousand Years Later`
 
@@ -128,9 +130,9 @@ Since, <b>Attack on Titan Season 1</b> doesn't have multiple parts, you will be 
 <br>
 `S01 -  - E01 - To You Two Thousand Years Later`
 <br>
-Notice the extra " - " separator
+Notice the extra " - " separator.
 
-To avoid such issues, the <b>separator</b> is made into a variable. Using the <b>separator</b>, the `episode_format` would look like this: 
+Such issues can be resolved using the `separator` variable. Using the `separator`, the `episode_format` would look like this: 
 <br>
 `{season_prefix}{season_number}{separator}{part_prefix}{part_number}{separator}{episode_prefix}{episode_number}{separator}{episode_title}`
 
@@ -138,20 +140,20 @@ To avoid such issues, the <b>separator</b> is made into a variable. Using the <b
 
 Available Variables:
 
-- `episode_format`: The format in which the episode filename will be renamed
-- `season_format`: The format in which the Anime folder will be renamed
+- `episode_format`: The format in which the episode filename will be renamed.
+- `season_format`: The format in which the Anime folder will be renamed.
 
 Available fields:
 
-- `{ep_number}`: Episode number of the episode
-- `{ep_title}`: Episode title of the episode
-- `{season_number}`: Season number of the Anime season
-- `{part_number}`: Part number of the season
-- `{season_title}`: Season title of the Anime Season
-- `{episode_preifx}`: Uses the `episode_prefix` set under <b>preferences</b>
-- `{season_preifx}`: Uses the `season_prefix` set under <b>preferences</b>
-- `{part_preifx}`: Uses the `part_prefix` set under <b>preferences</b>
-- `{separator}`: Uses the `separator` set under <b>preferences</b>
+- `{ep_number}`: Episode number of the episode.
+- `{ep_title}`: Episode title of the episode.
+- `{season_number}`: Season number of the Anime season.
+- `{part_number}`: Part number of the Anime season.
+- `{season_title}`: Season title of the Anime season.
+- `{episode_preifx}`: Uses the `episode_prefix` set under <b>preferences</b>.
+- `{season_preifx}`: Uses the `season_prefix` set under <b>preferences</b>.
+- `{part_preifx}`: Uses the `part_prefix` set under <b>preferences</b>.
+- `{separator}`: Uses the `separator` set under <b>preferences</b>.
 
 ### Season & Episode Format Example Templates
 
