@@ -18,7 +18,7 @@ os.system('cls')
 
 console.print("[b]Please Make sure you follow the guide on https://github.com/AbhiramH427/AniName before using this utility.\n")
 
-directory = Prompt.ask("[b][u]Directory path of Anime")
+directory = Prompt.ask("[b][u]Path of the Anime Directory")
 print()
 
 if not os.path.exists(directory):

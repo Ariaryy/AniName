@@ -84,7 +84,7 @@ def format_season(anime_title, season=0, part=0, display_mode=False):
 
     if (int(season) < 1):
         season_prefs['season_prefix'] = ''
-        season_prefs['seperator'] = ''
+        season_prefs['separator'] = ''
 
     if (int(part) < 1):
         season_prefs['part_prefix'] = ''
