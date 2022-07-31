@@ -172,7 +172,7 @@ episode_format = {season_prefix}{season_number}{part_prefix}{part_number}{episod
 episode_format = {episode_prefix}{episode_number}{separator}{episode_title}
 
 #To You Two Thousand Years Later (E01)
-episode_format = {episode_title} ({episode_prefix}{episode_number}{separator})
+episode_format = {episode_title} ({episode_prefix}{episode_number})
 
 #01x01 - To You Two Thousand Years Later
 episode_format = {season_number}x{episode_number}{separator}{episode_title}{episode_title}
