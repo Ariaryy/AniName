@@ -150,10 +150,10 @@ Available fields:
 - `{season_number}`: Season number of the Anime season.
 - `{part_number}`: Part number of the Anime season.
 - `{season_title}`: Season title of the Anime season.
-- `{episode_preifx}`: Uses the `episode_prefix` set under <b>preferences</b>.
-- `{season_preifx}`: Uses the `season_prefix` set under <b>preferences</b>.
-- `{part_preifx}`: Uses the `part_prefix` set under <b>preferences</b>.
-- `{separator}`: Uses the `separator` set under <b>preferences</b>.
+- `{episode_preifx}`: Uses the `episode_prefix` set under [Preferences](#preferences).
+- `{season_preifx}`: Uses the `season_prefix` set under [Preferences](#preferences).
+- `{part_preifx}`: Uses the `part_prefix` set under [Preferences](#preferences).
+- `{separator}`: Uses the `separator` set under [Preferences](#preferences).
 
 ### Season & Episode Format Example Templates
 
