@@ -40,6 +40,8 @@ python rename_utility.py
 
 ## Pre-requisite
 
+To run this application you'll need [Python](https://www.python.org/downloads/) installed on your computer.
+
 ### Anime Folder Formatting
 
 In order for <b>Rename Utility</b> to recognize your Anime folder, rename it to the following format <b>(without the square brackets and spaces)</b>:
@@ -58,12 +60,14 @@ https://myanimelist.net/anime/16498/Shingeki_no_Kyojin
 The <b>MyAnimeList ID</b> is <b>16498</b>
 * The number (ID) in the URL is the <b>MyAnimeList ID</b>.
 
-The <b>Season Number</b> and <b>Part Number</b> are used to identify the Season and Part of the Anime, and the files are renamed accordingly.
+The <b>Season Number</b> and <b>Part Number</b> are used to identify the season and part of the Anime, and the files are renamed accordingly.
 
-Here are a few examples:
+Here are a few examples of Anime folder names:
 * Attack on Titan Season 1: `16498S01`
 * Attack on Titan Season 3 Part 2: `38524S01P02`
 * Death Note: `1535`
+
+![Anime Folder Names Example](https://user-images.githubusercontent.com/69304096/182024189-394074c1-b2e7-4a2a-a1b7-dc858f482c91.png)
 
 ### Anime Episodes Formatting
 
@@ -71,7 +75,7 @@ The <b>Rename Utility</b> relies on the episode number to rename Anime episodes,
 
 ## Rename Utility
 
-The <b>Rename Utility</b> is to batch rename Anime Episodes.
+The <b>Rename Utility</b> is used to batch rename Anime episode files.
 
 To use the <b>Rename Utility</b>, open the command line in the app's folder and run:
 ```bash
@@ -83,7 +87,7 @@ When you launch the <b>Rename Utility</b>, you are asked to specify the <b>Path 
 The path can be obtained by opening the folder containing your Anime(s) using <b>File Explorer</b>, right-clicking on the address bar, and selecting <b>Copy adress</b>. The path will be copied to the clipboard which can be pasted into the app.
 
 The <b>Rename Utility</b> will scan for directories/subdirectories matching the format mentioned in 
-[Pre-requisite](#pre-requisite). The process of renaming can be started by verifying the animes found during the scan by the user.
+[Anime Folder Formatting](#anime-folder-formatting). The process of renaming can be started by confirming the Anime(s) found during the scan by the user.
 
 After the rename, a backup of all previous filenames are stored in a folder called <b>ORIGINAL_EPISODE_FILENAMES</b>. This folder is made outside the path entered while using the <b>Rename Utility</b>. The previous filenames can be restored using the [Restore Utility](#restore-utility).
 
