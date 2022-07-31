@@ -63,9 +63,9 @@ The <b>MyAnimeList ID</b> is <b>16498</b>
 The <b>Season Number</b> and <b>Part Number</b> are used to identify the season and part of the Anime, and the files are renamed accordingly.
 
 Here are a few examples of Anime folder names:
+* Death Note: `1535`
 * Attack on Titan Season 1: `16498S01`
 * Attack on Titan Season 3 Part 2: `38524S01P02`
-* Death Note: `1535`
 
 ![Anime Folder Names Example](https://user-images.githubusercontent.com/69304096/182024189-394074c1-b2e7-4a2a-a1b7-dc858f482c91.png)
 
