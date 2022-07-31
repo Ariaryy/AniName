@@ -49,16 +49,12 @@ In order for <b>Rename Utility</b> to recognize your Anime folder, rename it to 
 The <b>Season Number</b> and <b>Part Number</b> are completely optional.
 
 You can retrieve the <b>MyAnimeList</b> ID by following these steps:
-* Visit [MyAnimeList]("https://myanimelist.net/")
+* Visit [MyAnimeList](https://myanimelist.net/)
 * Use the search bar to find and open your Anime.
-* The URL should look something like this (pay attention to the ID):
-<br>
-`https://myanimelist.net/anime/ID/Anime-Name`
-<br><br>
-As an example, here is the URL for the anime <b>Attack on Titan</b>:
-<br>
-https://myanimelist.net/anime/16498/Shingeki_no_Kyojin
-<br>
+* The URL should look something like this (pay attention to the ID):  
+`https:​//myanimelist.net/anime/ID/Anime-Name`  
+As an example, here is the URL for the anime <b>Attack on Titan</b>:  
+https://myanimelist.net/anime/16498/Shingeki_no_Kyojin  
 The <b>MyAnimeList ID</b> is <b>16498</b>
 * The number (ID) in the URL is the <b>MyAnimeList ID</b>.
 
@@ -71,7 +67,7 @@ Here are a few examples:
 
 ### Anime Episodes Formatting
 
-The <b>Rename Utility</b> relies on the episode number to rename Anime episodes, so make sure that the filename of your Anime episodes contains the episode number. In the event that the rename fails, it is recommended that you use the [Bulk Rename Utility]("https://www.bulkrenameutility.co.uk/Download.php") or [PowerRename utility]("https://docs.microsoft.com/en-us/windows/powertoys/powerrename") that comes with [Microsoft PowerToys]("https://docs.microsoft.com/en-us/windows/powertoys/") to remove everything except the episode number from the episode files and then retry.
+The <b>Rename Utility</b> relies on the episode number to rename Anime episodes, so make sure that the filename of your Anime episodes contains the episode number. In the event that the rename fails, it is recommended that you use the [Bulk Rename Utility](https://www.bulkrenameutility.co.uk/Download.php) or [PowerRename utility](https://docs.microsoft.com/en-us/windows/powertoys/powerrename) that comes with [Microsoft PowerToys](https://docs.microsoft.com/en-us/windows/powertoys/) to remove everything except the episode number from the episode files and then retry.
 
 ## Rename Utility
 
