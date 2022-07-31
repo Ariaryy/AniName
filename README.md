@@ -60,7 +60,7 @@ https://myanimelist.net/anime/16498/Shingeki_no_Kyojin
 The <b>MyAnimeList ID</b> is <b>16498</b>
 * The number (ID) in the URL is the <b>MyAnimeList ID</b>.
 
-The <b>Season Number</b> and <b>Part Number</b> are used to identify the season and part of the Anime, and the files are renamed accordingly.
+`S[Season Number]` and `P[Part Number]` are used to identify the season and part of the Anime, and the files are renamed accordingly.
 
 Here are a few examples of Anime folder names:
 * Death Note: `1535`
