@@ -139,7 +139,7 @@ To avoid such issues, the <b>separator</b> is made into a variable. Using the <b
 Available Variables:
 
 - `episode_format`: The format in which the episode filename will be renamed
-- `season_format`: The format in which the Anime season folder will be renamed
+- `season_format`: The format in which the Anime folder will be renamed
 
 Available fields:
 
