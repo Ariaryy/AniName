@@ -153,7 +153,7 @@ Available fields:
 - `{part_preifx}`: Uses the `part_prefix` set under <b>preferences</b>
 - `{separator}`: Uses the `separator` set under <b>preferences</b>
 
-### Season and Episode Format Example Templates
+### Season & Episode Format Example Templates
 
 ```ini
 season_title = english 
@@ -206,3 +206,8 @@ Specifiy the path of the  <b>ORIGINAL_EPISODE_FILENAMES</b> folder and select th
 # Credits
 
  - [Jikan REST API](https://github.com/jikan-me/jikan-rest)
+
+# Disclaimer
+
+- AniName is not affiliated with MyAnimeList.net
+- You are responsible for the usage of this application.
