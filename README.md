@@ -48,7 +48,7 @@ In order for <b>Rename Utility</b> to recognize your Anime folder, rename it to 
 
 `[MyAnimeList ID]` `S[Season Number]` `P[Part Number]`
 
-The <b>Season Number</b> and <b>Part Number</b> are completely optional.
+`S[Season Number]` and `P[Part Number]` are completely optional.
 
 You can retrieve the <b>MyAnimeList</b> ID by following these steps:
 * Visit [MyAnimeList](https://myanimelist.net/)
