@@ -44,7 +44,7 @@ To run this application you'll need [Python](https://www.python.org/downloads/) 
 
 ### Anime Folder Formatting
 
-In order for <b>Rename Utility</b> to recognize your Anime folder, rename it to the following format: <b>(without square brackets and spaces)</b>:
+In order for <b>Rename Utility</b> to recognize your Anime folder, rename it to the following format <b>(without square brackets and spaces)</b>:
 
 `[MyAnimeList ID]` `S[Season Number]` `P[Part Number]`
 
