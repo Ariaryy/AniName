@@ -1,6 +1,9 @@
 <h1 align="center">
   <br>
-  <img src="https://user-images.githubusercontent.com/69304096/182015689-b968aabc-1deb-4dd7-b6a5-45554c0f8454.png" width="200" alt="AniName Logo"></a>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://user-images.githubusercontent.com/69304096/182015689-b968aabc-1deb-4dd7-b6a5-45554c0f8454.png">
+    <img alt="AniName Logo" width=200 src="https://user-images.githubusercontent.com/69304096/182155020-58d38e58-33dc-4688-9f20-a2d68e8dc51e.png">
+  </picture>
   <br>
   AniName
   <br>
