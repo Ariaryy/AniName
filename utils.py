@@ -1,5 +1,5 @@
 import json
-import glob, os, pathlib, sys
+import glob, os, pathlib
 import re
 import copy
 
@@ -61,26 +61,24 @@ async def jikan_fetch(request_client, base_url):
 
             if 'type' in r.json()['data']:
                 if not r.json()['data']['type'] == "TV":
-                    print(base_url)
-                    console.print('[b][red]There is no support for Anime types other than TV.\n')
-                    os.system('pause')
-                    sys.exit()
+                    return
                     
             return r.json()
 
         elif r.status_code == HTTPStatus.TOO_MANY_REQUESTS:
-            console.print('[b][red]The rate limit has been exceeded. Please try again later.\n')
+            console.print('\n[b][red]The rate limit has been exceeded. Please try again later.\n')
             os.system('pause')
-            sys.exit()
+            os._exit(1)
+
         elif r.status_code == HTTPStatus.NOT_FOUND:
-            console.print('[b][red]An error occured while fetching the Anime. Please ensure that the MyAnimeList ID provided is valid.\n')
+            console.print('\n[b][red]An error occured while fetching the Anime. Please ensure that the MyAnimeList ID provided is valid.\n')
             os.system('pause')
-            sys.exit()
+            os._exit(1)
 
         else:
             console.print('[b][red]The API request failed due to an error.\n')
             os.system('pause')
-            sys.exit()
+            os._exit(1)
 
 async def anime_title(mal_ids: list):
 
@@ -104,9 +102,9 @@ async def anime_title(mal_ids: list):
         url = f"https://api.jikan.moe/v4/anime/{mal_id}"
         tasks.append(asyncio.create_task(jikan_fetch(request_client ,url)))
 
-    total_tasks = len(tasks)
-    titles = [await f for f in track(asyncio.as_completed(tasks), description="Fetching Anime(s):", total=total_tasks, complete_style="yellow", finished_style="green", transient=True)]
-    #titles = await asyncio.gather(*tasks, return_exceptions=False)
+    #total_tasks = len(tasks)
+    #titles = [await f for f in track(asyncio.as_completed(tasks), description="Fetching Anime(s):", total=total_tasks, complete_style="yellow", finished_style="green", transient=True)]
+    titles = await asyncio.gather(*tasks, return_exceptions=False)
 
     titles = [title['data'][season_lang] for title in titles if title != None]
 
@@ -134,10 +132,10 @@ async def anime_episodes(mal_id, page=1, episode_list=[]):
             url = f"https://api.jikan.moe/v4/anime/{mal_id}/episodes?page={x}"
             tasks.append(asyncio.create_task(jikan_fetch(request_client, url)))
 
-        total_tasks = len(tasks)
+        #total_tasks = len(tasks)
 
-        episode_list_2 = [await f for f in track(asyncio.as_completed(tasks), description="Fetching Episodes:", total=total_tasks, complete_style="yellow", finished_style="green", transient=True)]
-        #episode_list_2 = await asyncio.gather(*tasks, return_exceptions=False)
+        #episode_list_2 = [await f for f in track(asyncio.as_completed(tasks), description="Fetching Episodes:", total=total_tasks, complete_style="yellow", finished_style="green", transient=True)]
+        episode_list_2 = await asyncio.gather(*tasks, return_exceptions=False)
         episode_list = episode_list + episode_list_2
 
     episode_list = [i['data'] for i in episode_list]

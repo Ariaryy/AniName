@@ -28,7 +28,6 @@ if not os.path.exists(directory):
 
 anime = Anime(directory)
 
-print()
 table = Table(title="[b][yellow]Anime(s) Found", box=box.ROUNDED, show_lines=True, highlight=True)
 
 table.add_column("Title", style="white")
