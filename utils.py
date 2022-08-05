@@ -1,9 +1,15 @@
-import requests
 import json
 import glob, os, pathlib, sys
 import re
 import copy
-from ratelimit import limits, sleep_and_retry
+
+import asyncio
+import httpx
+from http import HTTPStatus
+from aiolimiter import AsyncLimiter
+
+asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
 import anitopy
 import settings
 
@@ -15,8 +21,11 @@ from rich.tree import Tree
 from rich.filesize import decimal
 from rich.markup import escape
 from rich.text import Text
+from rich.progress import track
 
 console = Console()
+
+rate_limit = AsyncLimiter(3, 1.6)
 
 def parse_dir(dir_basename):
 
@@ -36,40 +45,104 @@ def parse_dir(dir_basename):
 
     return None
 
-@sleep_and_retry
-@limits(calls=3, period=4)
-def fetch_url(base_url, params=None):
+async def jikan_fetch(request_client, base_url):
 
     """
     Returns data from get request.
     Rate Limit: 3 calls per second.
     """
+    
+    await rate_limit.acquire()
+    async with rate_limit:
 
-    r = requests.get(base_url, params=params) if params == None else requests.get(base_url)
+        r = await request_client.get(base_url)
 
-    if not r.status_code == 200:
-        console.print('[b][red]The provided the MyAnimeList ID is invalid.\n')
-        os.system('pause')
-        sys.exit()
+        if r.status_code == HTTPStatus.OK:
 
-    return r.json()
+            if 'type' in r.json()['data']:
+                if not r.json()['data']['type'] == "TV":
+                    print(base_url)
+                    console.print('[b][red]There is no support for Anime types other than TV.\n')
+                    os.system('pause')
+                    sys.exit()
+                    
+            return r.json()
 
-def anime_search(title):
+        elif r.status_code == HTTPStatus.TOO_MANY_REQUESTS:
+            console.print('[b][red]The rate limit has been exceeded. Please try again later.\n')
+            os.system('pause')
+            sys.exit()
+        elif r.status_code == HTTPStatus.NOT_FOUND:
+            console.print('[b][red]An error occured while fetching the Anime. Please ensure that the MyAnimeList ID provided is valid.\n')
+            os.system('pause')
+            sys.exit()
+
+        else:
+            console.print('[b][red]The API request failed due to an error.\n')
+            os.system('pause')
+            sys.exit()
+
+async def anime_title(mal_ids: list):
+
+    request_client = httpx.AsyncClient()
 
     """
-    Returns MyAnimeList ID using Title of Anime.
+    Returns Anime Title(s) using MyAnimeList ID.
     """
 
-    r = fetch_url("https://api.jikan.moe/v4/anime", {"q": title, "limit": 5, "type": "tv", "order_by": "title"})
+    season_lang = copy.deepcopy(settings.season_lang)
 
-    try:
-        mal_id = (r['data'][0]['mal_id'])
-    except Exception as e:
-        print(json.dumps(r, indent=4, sort_keys=True))
-        print("\n")
-        print(e)
-    anime_title = (r['data'][0]['title'])
-    return mal_id, anime_title
+    if season_lang == 'romanji':
+        season_lang = 'title'
+    elif season_lang == 'japanese':
+        season_lang = 'title_japanese'
+    else:
+        season_lang = 'title_english'
+
+    tasks = []
+    for mal_id in mal_ids:
+        url = f"https://api.jikan.moe/v4/anime/{mal_id}"
+        tasks.append(asyncio.create_task(jikan_fetch(request_client ,url)))
+
+    total_tasks = len(tasks)
+    titles = [await f for f in track(asyncio.as_completed(tasks), description="Fetching Anime(s):", total=total_tasks, complete_style="yellow", finished_style="green", transient=True)]
+    #titles = await asyncio.gather(*tasks, return_exceptions=False)
+
+    titles = [title['data'][season_lang] for title in titles if title != None]
+
+    return titles
+
+async def anime_episodes(mal_id, page=1, episode_list=[]):
+
+    
+    request_client = httpx.AsyncClient()
+
+    """
+    Returns list of episode numbers and titles of an Anime using MyAnimeList ID.
+    """
+
+    r = await (jikan_fetch(request_client ,f"https://api.jikan.moe/v4/anime/{mal_id}/episodes?page{page}"))
+
+    last_visible_page = r['pagination']['last_visible_page']
+
+    episode_list.append(r)
+
+    if last_visible_page > 1:
+
+        tasks = []
+        for x in range(2, last_visible_page+1):
+            url = f"https://api.jikan.moe/v4/anime/{mal_id}/episodes?page={x}"
+            tasks.append(asyncio.create_task(jikan_fetch(request_client, url)))
+
+        total_tasks = len(tasks)
+
+        episode_list_2 = [await f for f in track(asyncio.as_completed(tasks), description="Fetching Episodes:", total=total_tasks, complete_style="yellow", finished_style="green", transient=True)]
+        #episode_list_2 = await asyncio.gather(*tasks, return_exceptions=False)
+        episode_list = episode_list + episode_list_2
+
+    episode_list = [i['data'] for i in episode_list]
+
+    return extract_episodes(episode_list) 
 
 def format_season(anime_title, season=0, part=0, display_mode=False):
 
@@ -101,58 +174,6 @@ def format_season(anime_title, season=0, part=0, display_mode=False):
         season_name = settings.season_format.format(**season_prefs)
 
     return season_name
-
-def anime_title(mal_id):
-
-    """
-    Returns Anime Title using MyAnimeList ID.
-    """
-
-    season_lang = copy.deepcopy(settings.season_lang)
-
-    if season_lang == 'romanji':
-        season_lang = 'title'
-    elif season_lang == 'japanese':
-        season_lang = 'title_japanese'
-    else:
-        season_lang = 'title_english'
-
-    r = fetch_url(f"https://api.jikan.moe/v4/anime/{mal_id}")
-
-    if not 'data' in r:
-        console.print(f'[b][red]There was an error while fetching the Anime title. Make sure that the provided MyAnimeList ID ({mal_id}) is valid.\n')
-        os.system('pause')
-        sys.exit()
-
-    if not r['data']['type'] == "TV":
-        console.print('[b][red]Anime types except TV are not supported.\n')
-        os.system('pause')
-        sys.exit()
-
-    title = (r['data'][season_lang])
-
-    return title
-
-def anime_episodes(mal_id, page=1, episode_list=[]):
-
-    """
-    Returns list of episode numbers and titles of an Anime using MyAnimeList ID.
-    """
-
-    r = (fetch_url(f"https://api.jikan.moe/v4/anime/{mal_id}/episodes", {"page": page}))
-
-    if not 'data' in r:
-        console.print(f'[b][red]There was an error while fetching the episodes. Make sure that the provided MyAnimeList ID ({mal_id}) is valid.\n')
-        os.system('pause')
-        sys.exit()
-
-    episode_list.append(r['data'])
-
-    if r['pagination']['has_next_page'] == True:
-        page += 1
-        anime_episodes(mal_id, page, episode_list)
-
-    return extract_episodes(episode_list) 
 
 def format_zeros(number, max_number=1):
 
@@ -192,9 +213,11 @@ def extract_episodes(episodes_data):
     ep_no = []
     ep_title = []
 
+    last_episode = episodes_data[len(episodes_data)-1][len(episodes_data[len(episodes_data)-1])-1]['mal_id']
+
     for page in episodes_data:
         for ep in (page):   
-            epn = format_zeros(str(ep['mal_id']), page[len(page)-1]['mal_id'])
+            epn = format_zeros(str(ep['mal_id']), last_episode)
             ept = format_punctuations(ep[episode_lang])
             ep_no.append(epn)         
             ep_title.append(ept)

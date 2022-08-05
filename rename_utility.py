@@ -78,7 +78,7 @@ for i, path in enumerate(anime.full_paths):
         'season_prefix': season_prefix,
         'episode_prefix': settings.episode_prefix,
         'part_prefix': part_prefix,
-        'seperator': settings.seperator
+        'separator': settings.separator
     }
 
     settings.set_ep_prefs(ep_prefs_data)
