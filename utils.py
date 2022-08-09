@@ -144,7 +144,7 @@ async def anime_episodes(mal_id, page=1, episode_list=[]):
             url = f"https://api.jikan.moe/v4/anime/{mal_id}/episodes?page={x}"
             tasks.append(asyncio.create_task(jikan_fetch(request_client, url)))
 
-        # total_tasks = len(tasks)
+        #total_tasks = len(tasks)
 
         # episode_list_2 = [await f for f in track(asyncio.as_completed(tasks), description="Fetching Episodes:", total=total_tasks, complete_style="yellow", finished_style="green", transient=True)]
         episode_list_2 = await asyncio.gather(*tasks, return_exceptions=False)
@@ -282,17 +282,17 @@ def rename(dir, rename_dir, pattern, episodes, dir_title):
 
         renderables.append(Panel(f"[b]{title}\n\n[green]{rename_string}"))
 
-        # try:
-        #     os.rename(
-        #         pathAndFilename, os.path.join(rename_dir, f"{rename_string}{ext}")
-        #     )
-        # except:
-        #     pass
+        try:
+            os.rename(
+                pathAndFilename, os.path.join(rename_dir, f"{rename_string}{ext}")
+            )
+        except:
+            pass
 
-    # os.rename(
-    #     rename_dir,
-    #     os.path.join(os.path.dirname(rename_dir), format_punctuations(dir_title)),
-    # )
+    os.rename(
+        rename_dir,
+        os.path.join(os.path.dirname(rename_dir), format_punctuations(dir_title)),
+    )
 
     console.print(Columns(renderables))
     oldfilespath = os.path.join(os.path.dirname(dir), "ORIGINAL_EPISODE_FILENAMES")
