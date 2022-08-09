@@ -455,4 +455,4 @@ def config_format_parse(format, args):
 
         format_split[i] = "".join(arg)
 
-    return "".join(format_split)
+    return format_punctuations("".join(format_split))
