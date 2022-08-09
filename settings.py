@@ -7,32 +7,24 @@ def init():
     import configparser
 
     config_file = configparser.ConfigParser()
-    config_file.read("conf.ini", encoding='utf8')
+    config_file.read("conf.ini", encoding="utf8")
 
-    global episode_format, episode_lang, episode_prefix, season_format, season_lang, season_prefix, part_prefix, separator, season_metadata_format, season_display_format
+    global episode_format, episode_lang, season_format, season_lang, season_metadata_format, season_display_format
 
-    episode_format = config_file['formatting']['episode_format']
-    episode_lang = config_file['preferences']['episode_title']
-    episode_prefix = config_file['preferences']['episode_prefix']
+    episode_format = config_file["formatting"]["episode_format"]
+    episode_lang = config_file["preferences"]["season_title_language"]
 
-    season_format = config_file['formatting']['season_format']
-    season_lang = config_file['preferences']['season_title']
-    season_prefix = config_file['preferences']['season_prefix']
+    season_format = config_file["formatting"]["season_format"]
+    season_lang = config_file["preferences"]["season_title_language"]
 
-    part_prefix = config_file['preferences']['part_prefix']
-
-    separator = (config_file['preferences']['separator']).replace('"', '')
-
-    season_display_format = "{season_prefix}{season_number}{part_prefix}{part_number}{separator}{season_title}"
+    season_display_format = r"{[S]&sn&[P]&pn& - |}{st|}"
 
     season_metadata_format = {
-    'season_prefix': season_prefix,
-    'part_prefix': part_prefix,
-    'separator': separator,
-    'season_number': '',
-    'season_title': '',
-    'part_number': '',
-}
+        "sn": None,
+        "pn": None,
+        "st": None,
+    }
+
 
 def set_ep_prefs(ep_prefs_data):
 

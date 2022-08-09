@@ -102,16 +102,15 @@ After the rename, a backup of all previous filenames are stored in a folder call
 
 The <b>conf.ini</b> file present in the app folder allows you to customize how your files are renamed.
 
-### Preferences
+### Language Options
 
-Available Variables:
+Available options:
 
-- `season_title`: Language of the season title. Can be `english`, `romanji` or `japanese`.
-- `episode_title`: Language of the episode title. Can be `english`, `romanji` or `japanese`.
-- `episode_prefix`: Prefix that can be used before episode number.
-- `season_prefix`: Prefix that can be used before season number.
-- `part_prefix`: Prefix that can be used before part number.
-- `separator`: Used as a delimiter (details below).
+- `season_title_language`: Language of the season/anime title. 
+- `episode_title_language`: Language of the episode title.
+
+Available Language values are `english`, `romanji` and `japanese`
+
 
 Examples of <b>Attack on Titan</b> under different <b>Language</b> values:
 
@@ -119,80 +118,62 @@ Examples of <b>Attack on Titan</b> under different <b>Language</b> values:
 - `romanji`: Shingeki no Kyojin
 - `japanese`: 進撃の巨人
 
-The `separator` is a variable that can be used in the season and episode formatting options when you need to separate two variables.  
-
-It exists because, for instance, you might want to name the episodes of <b>Attack on Titan Season 1</b> as follows:
-<br>
-`S01E01 - To You Two Thousand Years Later`
-
-And your `episode_format` looks something like this:
-<br>
-`{season_prefix}{season_number} - {part_prefix}{part_number} - {episode_prefix}{episode_number} - {episode_title}`
-
-Since, <b>Attack on Titan Season 1</b> doesn't have multiple parts, you will be left with a filename like this:
-<br>
-`S01 -  - E01 - To You Two Thousand Years Later`
-<br>
-Notice the extra " - " separator.
-
-Such issues can be resolved using the `separator` variable. Using the `separator`, the `episode_format` would look like this: 
-<br>
-`{season_prefix}{season_number}{separator}{part_prefix}{part_number}{separator}{episode_prefix}{episode_number}{separator}{episode_title}`
-
 ### Season & Episode Formatting
 
-Available Variables:
+The formatting options can contain special sequences that will be replaced when renaming. For example, `{sn}` or `{[S]&sn|}`
+
+The field names themselves (the part inside the `{}`) can also have some special formatting:
+
+- <b>Conjunction:</b> Text, variables, prefixes can be merged by using a `&` separator. Example, `{ - &et}`
+
+- <b>Prefix:</b> A value enclosed in `[]` used before a variable. For example, `{[S]&sn}`. this value will not be used if the varible after it is empty.
+
+- <b>Postfix:</b> A value enclosed in `()` used after a variable. For example, `{sn&( season)}`. this value will not be used if the varible after it is empty.
+
+- <b>Default:</b> A literal default value can be specified for when the field is empty using a `|` separator. Example, `{pn|00}`. By default, the default value is empty.
+
+- The above special formatting can be used as text inside the field by using the escape character `\`. Example, `{sn& \& &pn}`
+
+Available options:
 
 - `episode_format`: The format in which the episode filename will be renamed.
 - `season_format`: The format in which the Anime folder will be renamed.
 
 Available fields:
 
-- `{ep_number}`: Episode number of the episode.
-- `{ep_title}`: Episode title of the episode.
-- `{season_number}`: Season number of the Anime season.
-- `{part_number}`: Part number of the Anime season.
-- `{season_title}`: Season title of the Anime season.
-- `{episode_preifx}`: Uses the `episode_prefix` set under [Preferences](#preferences).
-- `{season_preifx}`: Uses the `season_prefix` set under [Preferences](#preferences).
-- `{part_preifx}`: Uses the `part_prefix` set under [Preferences](#preferences).
-- `{separator}`: Uses the `separator` set under [Preferences](#preferences).
+- `sn`: Season number
+- `pn`: Part number
+- `en`: Episode number
+- `st`: Season/Anime title
+- `et`: Episode title
 
 ### Season & Episode Format Example Templates
 
 ```ini
-season_title = english 
-episode_title = english
+# S01E01 - To You Two Thousand Years Later
+# S03P02E01 - The Town Where Everything Began
+episode_format = {[S]&sn|}{[P]&pn|}{[E]&en|} - {et|}
 
-season_prefix = S
-part_prefix = P
-episode_prefix = E
-separator = " - " 
+# E01 - To You Two Thousand Years Later
+episode_format = {[E]&en|} - {et|}
 
-#S01E01 - To You Two Thousand Years Later
-#S03P02E01 - The Town Where Everything Began
-episode_format = {season_prefix}{season_number}{part_prefix}{part_number}{episode_prefix}{episode_number}{separator}{episode_title} 
+# To You Two Thousand Years Later (E01)
+episode_format = {et|} ({[E]&en|})
 
-#E01 - To You Two Thousand Years Later
-episode_format = {episode_prefix}{episode_number}{separator}{episode_title}
+# 01x01 - To You Two Thousand Years Later
+episode_format = {sn&x|}{en|} - {et|}
 
-#To You Two Thousand Years Later (E01)
-episode_format = {episode_title} ({episode_prefix}{episode_number})
+# S01 - Attack on Titan
+# S03P02 - Attack on Titan Season 3 Part 2
+season_format = {[S]&sn&[P]&pn& - |}{st|}
 
-#01x01 - To You Two Thousand Years Later
-episode_format = {season_number}x{episode_number}{separator}{episode_title}{episode_title}
+# Attack on Titan (S01)
+# Attack on Titan Season 3 Part 2 (S03P02)
+season_format = {st|} ({[S]&sn|}{[P]&pn|})
 
-#S01 - Attack on Titan
-#S03P02 - Attack on Titan Season 3 Part 2
-season_format = {season_prefix}{season_number}{part_prefix}{part_number}{separator}{season_title}
-
-#Attack on Titan (S01)
-#Attack on Titan Season 3 Part 2 (S03P02)
-season_format = {season_title} ({season_prefix}{season_number}{part_prefix}{part_number})
-
-#Attack on Titan
-#Attack on Titan Season 3 Part 2
-season_format = {season_title}
+# Attack on Titan
+# Attack on Titan Season 3 Part 2
+season_format = {st|}
 ```
 
 # Restore Utility

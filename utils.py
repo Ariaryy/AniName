@@ -27,23 +27,25 @@ console = Console()
 
 rate_limit = AsyncLimiter(3, 1.6)
 
+
 def parse_dir(dir_basename):
 
-    var = re.search(r'^([\d]+)$|^([\d]+)([Ss][\d]+)([Pp][\d]+)?$', dir_basename)
+    var = re.search(r"^([\d]+)$|^([\d]+)([Ss][\d]+)([Pp][\d]+)?$", dir_basename)
 
     if var != None:
 
         var = [i for i in var.groups() if i != None]
 
         if len(var) == 1:
-            var.append(['', ''])
+            var.append(["", ""])
 
         if len(var) == 2:
-            var.append('')
+            var.append("")
 
         return var[0], var[1], var[2]
 
     return None
+
 
 async def jikan_fetch(request_client, base_url):
 
@@ -51,7 +53,7 @@ async def jikan_fetch(request_client, base_url):
     Returns data from get request.
     Rate Limit: 3 calls per second.
     """
-    
+
     await rate_limit.acquire()
     async with rate_limit:
 
@@ -59,26 +61,31 @@ async def jikan_fetch(request_client, base_url):
 
         if r.status_code == HTTPStatus.OK:
 
-            if 'type' in r.json()['data']:
-                if not r.json()['data']['type'] == "TV":
+            if "type" in r.json()["data"]:
+                if not r.json()["data"]["type"] == "TV":
                     return
-                    
+
             return r.json()
 
         elif r.status_code == HTTPStatus.TOO_MANY_REQUESTS:
-            console.print('\n[b][red]The rate limit has been exceeded. Please try again later.\n')
-            os.system('pause')
+            console.print(
+                "\n[b][red]The rate limit has been exceeded. Please try again later.\n"
+            )
+            os.system("pause")
             os._exit(1)
 
         elif r.status_code == HTTPStatus.NOT_FOUND:
-            console.print('\n[b][red]An error occured while fetching the Anime. Please ensure that the MyAnimeList ID provided is valid.\n')
-            os.system('pause')
+            console.print(
+                "\n[b][red]An error occured while fetching the Anime. Please ensure that the MyAnimeList ID provided is valid.\n"
+            )
+            os.system("pause")
             os._exit(1)
 
         else:
-            console.print('[b][red]The API request failed due to an error.\n')
-            os.system('pause')
+            console.print("[b][red]The API request failed due to an error.\n")
+            os.system("pause")
             os._exit(1)
+
 
 async def anime_title(mal_ids: list):
 
@@ -90,88 +97,63 @@ async def anime_title(mal_ids: list):
 
     season_lang = copy.deepcopy(settings.season_lang)
 
-    if season_lang == 'romanji':
-        season_lang = 'title'
-    elif season_lang == 'japanese':
-        season_lang = 'title_japanese'
+    if season_lang == "romanji":
+        season_lang = "title"
+    elif season_lang == "japanese":
+        season_lang = "title_japanese"
     else:
-        season_lang = 'title_english'
+        season_lang = "title_english"
 
     tasks = []
     for mal_id in mal_ids:
         url = f"https://api.jikan.moe/v4/anime/{mal_id}"
-        tasks.append(asyncio.create_task(jikan_fetch(request_client ,url)))
+        tasks.append(asyncio.create_task(jikan_fetch(request_client, url)))
 
-    #total_tasks = len(tasks)
-    #titles = [await f for f in track(asyncio.as_completed(tasks), description="Fetching Anime(s):", total=total_tasks, complete_style="yellow", finished_style="green", transient=True)]
+    # total_tasks = len(tasks)
+    # titles = [await f for f in track(asyncio.as_completed(tasks), description="Fetching Anime(s):", total=total_tasks, complete_style="yellow", finished_style="green", transient=True)]
     titles = await asyncio.gather(*tasks, return_exceptions=False)
 
-    titles = [title['data'][season_lang] for title in titles if title != None]
+    titles = [title["data"][season_lang] for title in titles if title != None]
 
     return titles
 
+
 async def anime_episodes(mal_id, page=1, episode_list=[]):
 
-    
     request_client = httpx.AsyncClient()
 
     """
     Returns list of episode numbers and titles of an Anime using MyAnimeList ID.
     """
 
-    r = await (jikan_fetch(request_client ,f"https://api.jikan.moe/v4/anime/{mal_id}/episodes?page{page}"))
+    r = await (
+        jikan_fetch(
+            request_client,
+            f"https://api.jikan.moe/v4/anime/{mal_id}/episodes?page{page}",
+        )
+    )
 
-    last_visible_page = r['pagination']['last_visible_page']
+    last_visible_page = r["pagination"]["last_visible_page"]
 
     episode_list.append(r)
 
     if last_visible_page > 1:
 
         tasks = []
-        for x in range(2, last_visible_page+1):
+        for x in range(2, last_visible_page + 1):
             url = f"https://api.jikan.moe/v4/anime/{mal_id}/episodes?page={x}"
             tasks.append(asyncio.create_task(jikan_fetch(request_client, url)))
 
-        #total_tasks = len(tasks)
+        # total_tasks = len(tasks)
 
-        #episode_list_2 = [await f for f in track(asyncio.as_completed(tasks), description="Fetching Episodes:", total=total_tasks, complete_style="yellow", finished_style="green", transient=True)]
+        # episode_list_2 = [await f for f in track(asyncio.as_completed(tasks), description="Fetching Episodes:", total=total_tasks, complete_style="yellow", finished_style="green", transient=True)]
         episode_list_2 = await asyncio.gather(*tasks, return_exceptions=False)
         episode_list = episode_list + episode_list_2
 
-    episode_list = [i['data'] for i in episode_list]
+    episode_list = [i["data"] for i in episode_list]
 
-    return extract_episodes(episode_list) 
+    return extract_episodes(episode_list)
 
-def format_season(anime_title, season=0, part=0, display_mode=False):
-
-    """
-    Formats Anime season titles in the format provided in the config file.
-    """
-
-
-    season_prefs = copy.deepcopy(settings.season_metadata_format)
-
-    season_prefs['season_title'] = anime_title
-
-    if (int(season) < 1):
-        season_prefs['season_prefix'] = ''
-        season_prefs['separator'] = ''
-
-    if (int(part) < 1):
-        season_prefs['part_prefix'] = ''
-
-    if (int(season) >= 1):
-        season_prefs['season_number'] = format_zeros(str(season))
-
-    if (int(part) >= 1):
-        season_prefs['season_number'] = format_zeros(str(season))
-        season_prefs['part_number'] = format_zeros(str(part))
-    if display_mode == True:
-        season_name = settings.season_display_format.format(**season_prefs)
-    else:
-        season_name = settings.season_format.format(**season_prefs)
-
-    return season_name
 
 def format_zeros(number, max_number=1):
 
@@ -179,9 +161,13 @@ def format_zeros(number, max_number=1):
     Adds an appropriate number of leading zeros to a number based on the max number.
     """
 
+    if number == None:
+        return None
+
     if max_number < 10:
         max_number *= 10
-    return number.zfill(len(str(max_number)))
+    return str(number).zfill(len(str(max_number)))
+
 
 def format_punctuations(string):
 
@@ -189,21 +175,22 @@ def format_punctuations(string):
     Returns string with punctuations appropriate for Windows file name.
     """
 
-    string = re.sub(':', ' ', str(string))
-    string = re.sub(r'["\/<>\?\\\| +]+', ' ', str(string))
+    string = re.sub(":", " ", str(string))
+    string = re.sub(r'["\/<>\?\\\| +]+', " ", str(string))
 
     return string
+
 
 def extract_episodes(episodes_data):
 
     episode_lang = copy.deepcopy(settings.episode_lang)
 
-    if episode_lang == 'romanji':
-        episode_lang = 'title_romanji'
-    elif episode_lang == 'japanese':
-        episode_lang = 'title_japanese'
+    if episode_lang == "romanji":
+        episode_lang = "title_romanji"
+    elif episode_lang == "japanese":
+        episode_lang = "title_japanese"
     else:
-        episode_lang = 'title'
+        episode_lang = "title"
 
     """
     Returns a dictionary containing Episode Numbers and the respective Episode Title from the data fetched using anime_episodes()
@@ -211,16 +198,19 @@ def extract_episodes(episodes_data):
     ep_no = []
     ep_title = []
 
-    last_episode = episodes_data[len(episodes_data)-1][len(episodes_data[len(episodes_data)-1])-1]['mal_id']
+    last_episode = episodes_data[len(episodes_data) - 1][
+        len(episodes_data[len(episodes_data) - 1]) - 1
+    ]["mal_id"]
 
     for page in episodes_data:
-        for ep in (page):   
-            epn = format_zeros(str(ep['mal_id']), last_episode)
+        for ep in page:
+            epn = format_zeros(str(ep["mal_id"]), last_episode)
             ept = format_punctuations(ep[episode_lang])
-            ep_no.append(epn)         
+            ep_no.append(epn)
             ep_title.append(ept)
 
     return ep_no, ep_title
+
 
 def filename_fix_existing(filename, dirname):
 
@@ -229,19 +219,17 @@ def filename_fix_existing(filename, dirname):
     return filename that doesn't exist already.
     """
 
-    name, ext = filename.rsplit('.', 1)
+    name, ext = filename.rsplit(".", 1)
     names = [x for x in os.listdir(dirname) if x.startswith(name)]
-    names = [x.rsplit('.', 1)[0] for x in names]
-    suffixes = [x.replace(name, '') for x in names]
+    names = [x.rsplit(".", 1)[0] for x in names]
+    suffixes = [x.replace(name, "") for x in names]
     # filter suffixes that match ' (x)' pattern
-    suffixes = [x[2:-1] for x in suffixes
-                   if x.startswith(' (') and x.endswith(')')]
-    indexes  = [int(x) for x in suffixes
-                   if set(x) <= set('0123456789')]
+    suffixes = [x[2:-1] for x in suffixes if x.startswith(" (") and x.endswith(")")]
+    indexes = [int(x) for x in suffixes if set(x) <= set("0123456789")]
     idx = 1
     if indexes:
         idx += sorted(indexes)[-1]
-    return '%s (%d).%s' % (name, idx, ext)
+    return "%s (%d).%s" % (name, idx, ext)
 
 
 def rename(dir, rename_dir, pattern, episodes, dir_title):
@@ -250,64 +238,89 @@ def rename(dir, rename_dir, pattern, episodes, dir_title):
     Renames files using path, file pattern and episodes fetched using anime_episodes()
     """
 
-    pathAndFilenameList = (sorted(list(glob.iglob(os.path.join(rename_dir, pattern)))))
+    pathAndFilenameList = sorted(list(glob.iglob(os.path.join(rename_dir, pattern))))
 
     renderables = []
 
-    anitomy_options = {'allowed_delimiters': ' -_.&+,|'}
+    anitomy_options = {"allowed_delimiters": " -_.&+,|"}
 
-    regexp = re.compile(r'([Pp][\d]+)')
+    regexp = re.compile(r"([Pp][\d]+)")
 
-    #Removes part number so that Anitomy doesn't fail
-    anitomy_dict = [os.path.basename(re.sub(regexp, '', i)) for i in pathAndFilenameList]
+    # Removes part number so that Anitomy doesn't fail
+    anitomy_dict = [
+        os.path.basename(re.sub(regexp, "", i)) for i in pathAndFilenameList
+    ]
     anitomy_dict = [(anitopy.parse(i, options=anitomy_options)) for i in anitomy_dict]
 
     for i, file in enumerate(pathAndFilenameList):
-        anitomy_dict[i]['file_name'] = os.path.basename(file)
+        anitomy_dict[i]["file_name"] = os.path.basename(file)
 
-    anitomy_dict = [i for i in anitomy_dict if 'episode_number' in i]
+    anitomy_dict = [i for i in anitomy_dict if "episode_number" in i]
 
     old_new = {os.path.join(os.path.dirname(rename_dir), dir_title): {}}
 
     for anitomy in anitomy_dict:
 
-        pathAndFilename = os.path.join(rename_dir, anitomy['file_name'])
-        
+        pathAndFilename = os.path.join(rename_dir, anitomy["file_name"])
+
         title, ext = os.path.splitext(os.path.basename(pathAndFilename))
 
-        ep_no = format_zeros(anitomy['episode_number'], len(anitomy_dict))
+        ep_no = format_zeros(anitomy["episode_number"], len(anitomy_dict))
 
         episodeName = episodes[ep_no]
 
         ep_title_prefs = copy.deepcopy(settings.ep_prefs)
 
-        ep_title_prefs.update({'episode_number': ep_no, 'episode_title': episodeName})
+        ep_title_prefs.update({"en": ep_no, "et": episodeName})
 
-        rename_string = settings.episode_format.format(**ep_title_prefs)
+        rename_string = config_format_parse(settings.episode_format, ep_title_prefs)
+        # rename_string = settings.episode_format.format(**ep_title_prefs)
 
-        old_new[os.path.join(os.path.dirname(rename_dir), dir_title)].update({f'{rename_string}{ext}':f'{title}{ext}'})
+        old_new[os.path.join(os.path.dirname(rename_dir), dir_title)].update(
+            {f"{rename_string}{ext}": f"{title}{ext}"}
+        )
 
         renderables.append(Panel(f"[b]{title}\n\n[green]{rename_string}"))
 
-        try:
-            os.rename(pathAndFilename, os.path.join(rename_dir, f"{rename_string}{ext}"))
-        except:
-            pass
+        # try:
+        #     os.rename(
+        #         pathAndFilename, os.path.join(rename_dir, f"{rename_string}{ext}")
+        #     )
+        # except:
+        #     pass
 
-    os.rename(rename_dir, os.path.join(os.path.dirname(rename_dir), format_punctuations(dir_title)))
+    # os.rename(
+    #     rename_dir,
+    #     os.path.join(os.path.dirname(rename_dir), format_punctuations(dir_title)),
+    # )
 
     console.print(Columns(renderables))
-    oldfilespath = os.path.join(os.path.dirname(dir), 'ORIGINAL_EPISODE_FILENAMES')
+    oldfilespath = os.path.join(os.path.dirname(dir), "ORIGINAL_EPISODE_FILENAMES")
 
     if not os.path.exists(oldfilespath):
         os.makedirs(oldfilespath)
 
-    with open(os.path.join(oldfilespath, filename_fix_existing(f"{format_punctuations(dir_title)}.json", oldfilespath)), "w", encoding="utf-8") as f:
-        f.write(json.dumps(old_new, indent = 4))
+    with open(
+        os.path.join(
+            oldfilespath,
+            filename_fix_existing(
+                f"{format_punctuations(dir_title)}.json", oldfilespath
+            ),
+        ),
+        "w",
+        encoding="utf-8",
+    ) as f:
+        f.write(json.dumps(old_new, indent=4))
+
 
 def walk_directory(directory: pathlib.Path, tree: Tree) -> None:
-    """Recursively build a Tree with directory contents."""
+
+    """
+    Recursively build a Tree with directory contents.
+    """
+
     # Credits: https://github.com/Textualize/rich/blob/master/examples/tree.py
+
     # Sort dirs first then by filename
     paths = sorted(
         pathlib.Path(directory).iterdir(),
@@ -334,13 +347,20 @@ def walk_directory(directory: pathlib.Path, tree: Tree) -> None:
             icon = "📺 " if path.suffix == ".mkv" else "📄 "
             tree.add(Text(icon) + text_filename)
 
-def ani_parse_dir(directory: pathlib.Path, check_init_path=False, parsed_paths=[]) -> None:
+
+def ani_parse_dir(
+    directory: pathlib.Path, check_init_path=False, parsed_paths=[]
+) -> None:
+
+    """
+    Recursively scans all sub directories to find the ones matching the required format.
+    """
 
     paths = sorted(pathlib.Path(directory).iterdir())
 
-    if (check_init_path == True):
+    if check_init_path == True:
         if parse_dir(os.path.basename(directory)) != None:
-                parsed_paths.append(directory)
+            parsed_paths.append(directory)
 
     for path in paths:
         # Remove hidden files
@@ -352,3 +372,87 @@ def ani_parse_dir(directory: pathlib.Path, check_init_path=False, parsed_paths=[
             ani_parse_dir(path, False, parsed_paths)
 
     return parsed_paths
+
+
+def config_format_parse(format, args):
+
+    format_split = re.findall(r"{[^}]*}|[\s\S]", format)
+
+    for i, arg in enumerate(format_split):
+
+        default = ""
+
+        if str(arg).startswith("{") and str(arg).endswith("}"):
+
+            arg = str(arg).strip("{}")
+            arg_split = re.split(r"([\\+]|[\&+]|[\|]|[\s+])", arg)
+
+            arg_split = [k for k in arg_split if k != ""]
+
+            for j, sub_arg in enumerate(arg_split):
+
+                if sub_arg == "&" and arg_split[j - 1] == "\\":
+                    arg_split[j - 1 : j + 1] = ["".join(arg_split[j - 1 : j + 1])]
+
+            match_count = 0
+
+            for j, sub_arg in enumerate(arg_split):
+
+                if (str(sub_arg) in args and arg_split[j - 1] == "&") or (
+                    str(sub_arg) in args and j == 0
+                ):
+                    arg_split[j] = args[sub_arg]
+                    match_count += 1
+
+                if sub_arg == "|":
+                    default = "".join(arg_split[j + 1 :])
+                    del arg_split[j:]
+
+            arg_split = [k for k in arg_split if k != "&" and k != "|"]
+            arg_split = [k.strip("\\") if k == "\\&" else k for k in arg_split]
+
+            none_count = len([k for k in arg_split if k == None])
+
+            if None in arg_split and none_count == match_count:
+                arg_split = [default]
+            elif None in arg_split:
+                for k, sub_arg in enumerate(arg_split):
+                    if sub_arg == None:
+                        arg_split[k] = default
+                        if arg_split[k - 1].startswith("[") and arg_split[
+                            k - 1
+                        ].endswith("]"):
+                            del arg_split[k - 1]
+                        if arg_split[k + 1].startswith("(") and arg_split[
+                            k + 1
+                        ].endswith(")"):
+                            del arg_split[k + 1]
+
+            for k, sub_arg in enumerate(arg_split):
+                if sub_arg.startswith(("[", "(")) and arg_split[k - 1] != "\\":
+                    sub_arg = sub_arg.strip("[(")
+                    arg_split[k] = sub_arg
+
+                if sub_arg.startswith(("[", "(")) and arg_split[k - 1] == "\\":
+                    del arg_split[k - 1]
+
+                if (
+                    sub_arg.endswith(("]", ")"))
+                    and not sub_arg.startswith(("[", "("))
+                    and arg_split[k - 1] != "\\"
+                ):
+                    sub_arg = sub_arg.strip("])")
+                    arg_split[k] = sub_arg
+
+                if (
+                    not sub_arg.startswith(("[", "("))
+                    and sub_arg.endswith(("]", ")"))
+                    and arg_split[k - 1] == "\\"
+                ):
+                    del arg_split[k - 1]
+
+            arg = arg_split
+
+        format_split[i] = "".join(arg)
+
+    return "".join(format_split)
