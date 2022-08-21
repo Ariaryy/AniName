@@ -13,8 +13,7 @@
 
 <p align="center">
   <a href="#quick-start">Quick Start</a> •
-  <a href="#usage-and-options">Usage and Options</a> •
-  <a href="#credits">Credits</a>
+  <a href="#usage-and-options">Usage and Options</a>
 </p>
 
 # Quick Start
