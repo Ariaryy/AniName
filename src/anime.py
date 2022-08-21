@@ -5,7 +5,6 @@ from rich.progress import track
 import asyncio
 import src.settings as settings
 import src.mal as mal
-from icecream import ic
 
 asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
