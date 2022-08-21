@@ -13,8 +13,7 @@
 
 <p align="center">
   <a href="#quick-start">Quick Start</a> •
-  <a href="#usage-and-options">Usage and Options</a> •
-  <a href="#credits">Credits</a>
+  <a href="#usage-and-options">Usage and Options</a>
 </p>
 
 # Quick Start
@@ -91,7 +90,7 @@ python rename_utility.py
 
 When you launch the <b>Rename Utility</b>, you are asked to specify the <b>Path of the Anime Directory</b>. It refers to the path of the parent folder containing the Anime(s) the app is to rename.
 
-The path can be obtained by opening the folder containing your Anime(s) using <b>File Explorer</b>, right-clicking on the address bar, and selecting <b>Copy adress</b>. The path will be copied to the clipboard which can be pasted into the app.
+The path can be obtained by opening the folder containing your Anime(s) using <b>File Explorer</b>, right-clicking on the address bar, and selecting <b>Copy address</b>. The path will be copied to the clipboard which can be pasted into the app.
 
 The <b>Rename Utility</b> will scan for directories/subdirectories matching the format mentioned in 
 [Anime Folder Formatting](#anime-folder-formatting). The process of renaming can be started by confirming the Anime(s) found during the scan by the user.
