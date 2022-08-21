@@ -189,10 +189,6 @@ python restore_utility.py
 
 Specifiy the path of the  <b>ORIGINAL_EPISODE_FILENAMES</b> folder and select the backup file. Confirm to proceed restoring the filenames.
 
-# Credits
-
- - [Jikan REST API](https://github.com/jikan-me/jikan-rest)
-
 # Disclaimer
 
 - AniName is not affiliated with MyAnimeList.net

@@ -1,5 +1,5 @@
 import glob, os, json, pathlib, sys
-import utils
+import src.utils as utils
 
 from rich import print
 from rich.table import Table

@@ -3,15 +3,8 @@ import glob, os, pathlib
 import re
 import copy
 
-import asyncio
-import httpx
-from http import HTTPStatus
-from aiolimiter import AsyncLimiter
-
-asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-
 import anitopy
-import settings
+import src.settings as settings
 
 from rich import print
 from rich.console import Console
@@ -21,11 +14,8 @@ from rich.tree import Tree
 from rich.filesize import decimal
 from rich.markup import escape
 from rich.text import Text
-from rich.progress import track
 
 console = Console()
-
-rate_limit = AsyncLimiter(3, 1.6)
 
 
 def parse_dir(dir_basename):
@@ -45,114 +35,6 @@ def parse_dir(dir_basename):
         return var[0], var[1], var[2]
 
     return None
-
-
-async def jikan_fetch(request_client, base_url):
-
-    """
-    Returns data from get request.
-    Rate Limit: 3 calls per second.
-    """
-
-    await rate_limit.acquire()
-    async with rate_limit:
-
-        r = await request_client.get(base_url)
-
-        if r.status_code == HTTPStatus.OK:
-
-            if "type" in r.json()["data"]:
-                if not r.json()["data"]["type"] == "TV":
-                    return
-
-            return r.json()
-
-        elif r.status_code == HTTPStatus.TOO_MANY_REQUESTS:
-            console.print(
-                "\n[b][red]The rate limit has been exceeded. Please try again later.\n"
-            )
-            os.system("pause")
-            os._exit(1)
-
-        elif r.status_code == HTTPStatus.NOT_FOUND:
-            console.print(
-                "\n[b][red]An error occured while fetching the Anime. Please ensure that the MyAnimeList ID provided is valid.\n"
-            )
-            os.system("pause")
-            os._exit(1)
-
-        else:
-            console.print("[b][red]The API request failed due to an error.\n")
-            os.system("pause")
-            os._exit(1)
-
-
-async def anime_title(mal_ids: list):
-
-    request_client = httpx.AsyncClient()
-
-    """
-    Returns Anime Title(s) using MyAnimeList ID.
-    """
-
-    season_lang = copy.deepcopy(settings.season_lang)
-
-    if season_lang == "romanji":
-        season_lang = "title"
-    elif season_lang == "japanese":
-        season_lang = "title_japanese"
-    else:
-        season_lang = "title_english"
-
-    tasks = []
-    for mal_id in mal_ids:
-        url = f"https://api.jikan.moe/v4/anime/{mal_id}"
-        tasks.append(asyncio.create_task(jikan_fetch(request_client, url)))
-
-    # total_tasks = len(tasks)
-    # titles = [await f for f in track(asyncio.as_completed(tasks), description="Fetching Anime(s):", total=total_tasks, complete_style="yellow", finished_style="green", transient=True)]
-    titles = await asyncio.gather(*tasks, return_exceptions=False)
-
-    titles = [title["data"][season_lang] for title in titles if title != None]
-
-    return titles
-
-
-async def anime_episodes(mal_id, page=1, episode_list=[]):
-
-    request_client = httpx.AsyncClient()
-
-    """
-    Returns list of episode numbers and titles of an Anime using MyAnimeList ID.
-    """
-
-    r = await (
-        jikan_fetch(
-            request_client,
-            f"https://api.jikan.moe/v4/anime/{mal_id}/episodes?page{page}",
-        )
-    )
-
-    last_visible_page = r["pagination"]["last_visible_page"]
-
-    episode_list.append(r)
-
-    if last_visible_page > 1:
-
-        tasks = []
-        for x in range(2, last_visible_page + 1):
-            url = f"https://api.jikan.moe/v4/anime/{mal_id}/episodes?page={x}"
-            tasks.append(asyncio.create_task(jikan_fetch(request_client, url)))
-
-        #total_tasks = len(tasks)
-
-        # episode_list_2 = [await f for f in track(asyncio.as_completed(tasks), description="Fetching Episodes:", total=total_tasks, complete_style="yellow", finished_style="green", transient=True)]
-        episode_list_2 = await asyncio.gather(*tasks, return_exceptions=False)
-        episode_list = episode_list + episode_list_2
-
-    episode_list = [i["data"] for i in episode_list]
-
-    return extract_episodes(episode_list)
 
 
 def format_zeros(number, max_number=1):
@@ -179,37 +61,6 @@ def format_punctuations(string):
     string = re.sub(r'["\/<>\?\\\| +]+', " ", str(string))
 
     return string
-
-
-def extract_episodes(episodes_data):
-
-    episode_lang = copy.deepcopy(settings.episode_lang)
-
-    if episode_lang == "romanji":
-        episode_lang = "title_romanji"
-    elif episode_lang == "japanese":
-        episode_lang = "title_japanese"
-    else:
-        episode_lang = "title"
-
-    """
-    Returns a dictionary containing Episode Numbers and the respective Episode Title from the data fetched using anime_episodes()
-    """
-    ep_no = []
-    ep_title = []
-
-    last_episode = episodes_data[len(episodes_data) - 1][
-        len(episodes_data[len(episodes_data) - 1]) - 1
-    ]["mal_id"]
-
-    for page in episodes_data:
-        for ep in page:
-            epn = format_zeros(str(ep["mal_id"]), last_episode)
-            ept = format_punctuations(ep[episode_lang])
-            ep_no.append(epn)
-            ep_title.append(ept)
-
-    return ep_no, ep_title
 
 
 def filename_fix_existing(filename, dirname):

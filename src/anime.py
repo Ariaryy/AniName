@@ -1,9 +1,11 @@
 import os, re, sys
-import utils
+import src.utils as utils
 from rich.console import Console
 from rich.progress import track
 import asyncio
-import settings
+import src.settings as settings
+import src.mal as mal
+from icecream import ic
 
 asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
@@ -20,7 +22,7 @@ class Anime:
 
         # Used for filenames and displaying on screen
         self.anime_display_titles = {}
-        # Anime titles from MAL
+        # Anime titles from anime_data
         self.anime_titles = []
         # MAL IDs from folder name
         self.mal_ids = []
@@ -32,6 +34,8 @@ class Anime:
         self.part_nos = []
         # Path of Anime(s)
         self.full_paths = []
+        # Anime data from MAL
+        self.anime_data = []
 
         self.full_paths = utils.ani_parse_dir(path, True)
 
@@ -51,7 +55,7 @@ class Anime:
             self.mal_ids.append(mal_id)
             self.seasons.append(f"{season_no}{part_no}")
 
-        anime_titles = asyncio.run(utils.anime_title(self.mal_ids))
+        self.anime_data = asyncio.run(mal.fetch_animes(self.mal_ids))
 
         # Fetching Anime Titles
         for i, id in enumerate(self.anime_dirs):
@@ -65,27 +69,36 @@ class Anime:
             self.season_nos.append(utils.format_zeros(season))
             self.part_nos.append(utils.format_zeros(part))
 
-            format_args = {"sn": season, "pn": part, "st": anime_titles[i]}
+            title = self.anime_data[i][self.mal_ids[i]][settings.season_lang]
+
+            format_args = {"sn": season, "pn": part, "st": title}
 
             anime_display_title = utils.config_format_parse(
                 settings.season_display_format, format_args
             )
 
-            self.anime_titles.append(anime_titles[i])
+            self.anime_titles.append(title)
             self.anime_display_titles.update({id: anime_display_title})
 
-    def get_episodes(self, mal_id):
+    def get_episodes(self, anime_data):
 
         """
         Returns titles for all episodes in an Anime using MyAnimeList ID
         """
+
+        mal_id = list(anime_data[0].keys())[0]
 
         self.episodes = {mal_id: {}}
 
         ep_nos = []
         ep_titles = []
 
-        ep_nos, ep_titles = asyncio.run(utils.anime_episodes(mal_id))
+        episodes = (asyncio.run(mal.fetch_episodes(anime_data)))[0]
+
+        episodes = episodes[list(episodes.keys())[0]][settings.episode_lang]
+
+        (*ep_nos,) = episodes
+        (*ep_titles,) = episodes.values()
 
         for i, ep_no in enumerate(ep_nos):
             self.episodes[mal_id].update(

@@ -1,4 +1,4 @@
-import os, copy, sys
+import os, sys
 
 from rich import print as rprint
 from rich.table import Table
@@ -7,9 +7,9 @@ from rich.tree import Tree
 from rich import box
 from rich.prompt import Confirm, Prompt
 
-import settings
-from anime import Anime
-import utils
+import src.settings as settings
+from src.anime import Anime
+import src.utils as utils
 
 settings.init()
 console = Console()
@@ -62,7 +62,7 @@ for i, path in enumerate(anime.full_paths):
     season_part = anime.part_nos[i]
 
     console.print(f"\n[h1][b][u][yellow]Renaming: {season_title}\n")
-    anime.get_episodes(anime.mal_ids[i])
+    anime.get_episodes([anime.anime_data[i]])
 
     episodes = anime.episodes[anime.mal_ids[i]]
     anime_display_title = anime.anime_display_titles[anime.anime_dirs[i]]
