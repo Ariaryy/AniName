@@ -22,7 +22,7 @@ To clone and run this application, you'll need [Git](https://git-scm.com) and [P
 
 ```bash
 # Clone this repository
-git clone https://github.com/AbhiramH427/AniName
+git clone https://github.com/Ariaryy/AniName
 
 # Go into the repository
 cd AniName
