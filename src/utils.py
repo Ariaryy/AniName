@@ -3,7 +3,7 @@ import glob, os, pathlib
 import re
 import copy
 
-import anitopy
+import aniparse
 import src.settings as settings
 
 from rich import print
@@ -101,7 +101,8 @@ def rename(dir, rename_dir, pattern, episodes, dir_title):
     anitomy_dict = [
         os.path.basename(re.sub(regexp, "", i)) for i in pathAndFilenameList
     ]
-    anitomy_dict = [(anitopy.parse(i, options=anitomy_options)) for i in anitomy_dict]
+    
+    anitomy_dict = [(aniparse.parse(i, options=anitomy_options)) for i in anitomy_dict]
 
     for i, file in enumerate(pathAndFilenameList):
         anitomy_dict[i]["file_name"] = os.path.basename(file)
@@ -116,7 +117,7 @@ def rename(dir, rename_dir, pattern, episodes, dir_title):
 
         title, ext = os.path.splitext(os.path.basename(pathAndFilename))
 
-        ep_no = format_zeros(anitomy["episode_number"], len(anitomy_dict))
+        ep_no = format_zeros(anitomy["episode_number"], len(episodes))
 
         episodeName = episodes[ep_no]
 

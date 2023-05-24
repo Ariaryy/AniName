@@ -11,24 +11,22 @@ import src.settings as settings
 from src.anime import Anime
 import src.utils as utils
 
+from tkinter import filedialog
+
 settings.init()
 console = Console()
 
 os.system("cls")
 
 console.print(
-    "[b]Please Make sure you follow the guide on https://github.com/Ariaryy/AniName before using this utility.\n"
+    "[b]Make sure to follow the instructions on https://github.com/Ariaryy/AniName before you proceed.\n"
 )
 
-directory = Prompt.ask("[b][u]Path of the Anime Directory")
+directory = Prompt.ask("[b][u]Path of the Anime Directory (or press enter to select a folder)")
 print()
 
 if not os.path.exists(directory):
-    console.print(
-        "[b][red]Directory does not exist. Please provide a valid directory.\n"
-    )
-    os.system("pause")
-    sys.exit()
+    directory = filedialog.askdirectory(title="Select the Anime Directory")
 
 anime = Anime(directory)
 
