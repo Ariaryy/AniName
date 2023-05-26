@@ -19,8 +19,8 @@ episode_title_language = english
 
 [formatting]
 
-episode_format = {S&sn|}{P&pn|}{E&en|} - {et|}
-season_format = {[S]&sn&[P]&pn& - |}{st|}"""
+episode_format = {S&sn|}{P&pn|}{E&en|}{{ - }}{et|}
+season_format = {S&sn|}{P&pn|}{{ - }}{st|}"""
             )
     except:
         pass
