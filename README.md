@@ -131,9 +131,11 @@ The field names themselves (the part inside the `{}`) can also have some special
 
 - <b>Conjunction:</b> Text, variables, prefixes can be merged by using a `&` separator. Example, `{E&en}`
 
-- <b>Default:</b> A literal default value can be specified for when the field is empty using a `|` separator. Example, `{pn|00}`. By default, the default value is empty.
+- <b>Default:</b> A literal default value can be specified for when the field is empty using a `|` separator. Example, `{pn|00}`<br>By default, the default value is empty.
 
-- The special formatting character `&` can be used as a normal character inside the field by using the escape character `\`. Example, `{sn& \& &pn}`
+- Double curly braces `{{}}` can be used to specify a field that will only be used when the left of it is not empty. Example, `{sn}{{ - }}{st}`<br>In the above example, ` - ` will not be used that is specified inside `{{}}` if the season number `sn` is missing or empty. 
+
+- The special formatting character `&` can be used as a normal character inside the field by prefixing it with the escape character `\`.
 
 Available options:
 
@@ -153,28 +155,29 @@ Available fields:
 ```ini
 # S01E01 - To You Two Thousand Years Later
 # S03P02E01 - The Town Where Everything Began
-episode_format = {[S]&sn|}{[P]&pn|}{[E]&en|} - {et|}
+episode_format = {S&sn|}{P&pn|}{E&en|}{{ - }}{et|}
 
 # E01 - To You Two Thousand Years Later
-episode_format = {[E]&en|} - {et|}
+episode_format = {E&en|}{{ - }}{et|}
 
 # To You Two Thousand Years Later (E01)
-episode_format = {et|} ({[E]&en|})
+episode_format = {et|} ({E&en|})
 
 # 01x01 - To You Two Thousand Years Later
-episode_format = {sn&x|}{en|} - {et|}
+episode_format = {sn&x|}{en|}{{ - }}{et|}
 
 # S01 - Attack on Titan
 # S03P02 - Attack on Titan Season 3 Part 2
-season_format = {[S]&sn&[P]&pn& - |}{st|}
+season_format = {S&sn|}{P&pn|}{{ - }}{st|}
 
 # Attack on Titan (S01)
 # Attack on Titan Season 3 Part 2 (S03P02)
-season_format = {st|} ({[S]&sn|}{[P]&pn|})
+season_format = {st|} ({S&sn|}{P&pn|})
 
 # Attack on Titan
 # Attack on Titan Season 3 Part 2
-season_format = {st|}
+# "Anime" will be used if the Season/Anime name is missing/empty
+season_format = {st|Anime} 
 ```
 
 # Restore Utility
