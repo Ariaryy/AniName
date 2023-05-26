@@ -41,7 +41,7 @@ class Anime:
 
         if len(self.full_paths) == 0:
             console.print(
-                """[b][red]No directories matching the scan format were found.\n[yellow]Learn more about directory formatting: [blue]https://github.com/Ariaryy/AniName#pre-requisite\n"""
+                """[b][red]No directories matching the scan format were found.\n[yellow]Learn more about directory formatting: [blue]https://github.com/Ariaryy/AniName#anime-folder-formatting\n"""
             )
             os.system("pause")
             sys.exit()

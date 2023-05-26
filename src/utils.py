@@ -114,11 +114,6 @@ def rename(dir, rename_dir, pattern, episodes, dir_title):
 
     anitomy_dict = [i for i in anitomy_dict if "episode_number" in i]
 
-    dir_title = format_punctuations(dir_title)
-
-    if os.path.exists(os.path.join(os.path.dirname(rename_dir), dir_title)):
-        dir_title = foldername_fix_existing(dir_title, os.path.dirname(rename_dir))
-
     old_new = {os.path.join(os.path.dirname(rename_dir), dir_title): {}}
 
     for anitomy in anitomy_dict:
@@ -159,7 +154,7 @@ def rename(dir, rename_dir, pattern, episodes, dir_title):
     try:
         os.rename(
             rename_dir,
-            os.path.join(os.path.dirname(rename_dir), format_punctuations(dir_title)),
+            os.path.join(os.path.dirname(rename_dir), dir_title),
         )
     except:
         pass
@@ -173,7 +168,7 @@ def rename(dir, rename_dir, pattern, episodes, dir_title):
         os.path.join(
             oldfilespath,
             filename_fix_existing(
-                f"{format_punctuations(dir_title)}.json", oldfilespath
+                f"{dir_title}.json", oldfilespath
             ),
         ),
         "w",
