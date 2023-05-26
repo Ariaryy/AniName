@@ -1,7 +1,7 @@
 import aiohttp
 import asyncio
 import lxml.html
-import re
+import regex
 from urllib.parse import quote
 
 asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
@@ -108,7 +108,7 @@ async def parse_search_results(html):
         anime_types.append(row.xpath("./td[3]/text()")[0].strip())
         anime_urls.append(row.xpath('./td/div[@class="title"]/a/@href')[0].strip())
 
-    mal_ids = [re.findall(r"\/anime\/(\d+)", link)[0] for link in anime_urls]
+    mal_ids = [regex.findall(r"\/anime\/(\d+)", link)[0] for link in anime_urls]
 
     data = []
 
@@ -149,7 +149,7 @@ async def parse_anime(html, mal_id):
     if len(last_page) == 0:
         ep_pages = [f"https://myanimelist.net/anime/{mal_id}/_/episode?offset=0"]
     else:
-        max_offset = int(re.findall(r"\?offset=(\d+)$", last_page[0])[0])
+        max_offset = int(regex.findall(r"\?offset=(\d+)$", last_page[0])[0])
         ep_pages = [
             f"https://myanimelist.net/anime/{mal_id}/_/episode?offset={i}"
             for i in range(0, max_offset + 100, 100)
@@ -196,7 +196,7 @@ async def parse_episodes(htmls, mal_id):
                 title_rj.append(f"{titles_english[i]}\xa0{titles_english[i]}")
 
         titles_romanji, titles_japanese = map(
-            list, zip(*[re.split(r"\n+|\xa0+", ele) for ele in title_rj])
+            list, zip(*[regex.split(r"\n+|\xa0+", ele) for ele in title_rj])
         )
 
         for title_en, title_ro, title_jp, ep_no in zip(

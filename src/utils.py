@@ -1,9 +1,9 @@
 import json
 import glob, os, pathlib
-import re
 import copy
 
 import aniparse
+import regex
 import src.settings as settings
 
 from rich import print
@@ -19,7 +19,7 @@ console = Console()
 
 
 def parse_dir(dir_basename):
-    var = re.search(r"^([\d]+)$|^([\d]+)([Ss][\d]+)([Pp][\d]+)?$", dir_basename)
+    var = regex.search(r"^([\d]+)$|^([\d]+)([Ss][\d]+)([Pp][\d]+)?$", dir_basename)
 
     if var != None:
         var = [i for i in var.groups() if i != None]
@@ -53,8 +53,8 @@ def format_punctuations(string):
     Returns string with punctuations appropriate for Windows file name.
     """
 
-    string = re.sub(":", " ", str(string))
-    string = re.sub(r'["\/<>\?\\\| +]+', " ", str(string))
+    string = regex.sub(":", " ", str(string))
+    string = regex.sub(r'["\/<>\?\\\| +]+', " ", str(string))
 
     return string.strip()
 
@@ -78,6 +78,17 @@ def filename_fix_existing(filename, dirname):
     return "%s (%d).%s" % (name, idx, ext)
 
 
+def foldername_fix_existing(foldername, dirname):
+    names = [x for x in os.listdir(dirname) if x.startswith(foldername)]
+    suffixes = [x.replace(foldername, "") for x in names]
+    suffixes = [x[2:-1] for x in suffixes if x.startswith(" (") and x.endswith(")")]
+    indexes = [int(x) for x in suffixes if set(x) <= set("0123456789")]
+    idx = 1
+    if indexes:
+        idx += sorted(indexes)[-1]
+    return "%s (%d)" % (foldername, idx)
+
+
 def rename(dir, rename_dir, pattern, episodes, dir_title):
     """
     Renames files using path, file pattern and episodes fetched using anime_episodes()
@@ -89,11 +100,11 @@ def rename(dir, rename_dir, pattern, episodes, dir_title):
 
     anitomy_options = {"allowed_delimiters": " -_.&+,|"}
 
-    regexp = re.compile(r"([Pp][\d]+)")
+    regexp = regex.compile(r"([Pp][\d]+)")
 
     # Removes part number so that Anitomy doesn't fail
     anitomy_dict = [
-        os.path.basename(re.sub(regexp, "", i)) for i in pathAndFilenameList
+        os.path.basename(regex.sub(regexp, "", i)) for i in pathAndFilenameList
     ]
 
     anitomy_dict = [(aniparse.parse(i, options=anitomy_options)) for i in anitomy_dict]
@@ -102,6 +113,11 @@ def rename(dir, rename_dir, pattern, episodes, dir_title):
         anitomy_dict[i]["file_name"] = os.path.basename(file)
 
     anitomy_dict = [i for i in anitomy_dict if "episode_number" in i]
+
+    dir_title = format_punctuations(dir_title)
+
+    if os.path.exists(os.path.join(os.path.dirname(rename_dir), dir_title)):
+        dir_title = foldername_fix_existing(dir_title, os.path.dirname(rename_dir))
 
     old_new = {os.path.join(os.path.dirname(rename_dir), dir_title): {}}
 
@@ -118,28 +134,36 @@ def rename(dir, rename_dir, pattern, episodes, dir_title):
 
         ep_title_prefs.update({"en": ep_no, "et": episodeName})
 
-        rename_string = config_format_parse(settings.episode_format, ep_title_prefs)
-        # rename_string = settings.episode_format.format(**ep_title_prefs)
-
-        old_new[os.path.join(os.path.dirname(rename_dir), dir_title)].update(
-            {f"{rename_string}{ext}": f"{title}{ext}"}
+        rename_string = (
+            config_format_parse(settings.episode_format, ep_title_prefs) + ext
         )
 
-        renderables.append(Panel(f"[b]{title}\n\n[green]{rename_string}"))
+        if (
+            os.path.exists(os.path.join(rename_dir, rename_string))
+            and os.path.join(rename_dir, rename_string) != pathAndFilename
+        ):
+            rename_string = filename_fix_existing(rename_string, rename_dir)
 
         try:
-            os.rename(
-                pathAndFilename, os.path.join(rename_dir, f"{rename_string}{ext}")
+            os.rename(pathAndFilename, os.path.join(rename_dir, rename_string))
+            renderables.append(Panel(f"[b]{title}\n\n[green]{rename_string}"))
+
+            old_new[os.path.join(os.path.dirname(rename_dir), dir_title)].update(
+                {f"{rename_string}": f"{title}{ext}"}
             )
         except:
-            pass
-
-    os.rename(
-        rename_dir,
-        os.path.join(os.path.dirname(rename_dir), format_punctuations(dir_title)),
-    )
+            renderables.append(Panel(f"[b]{title}\n\n[red]Failed to rename"))
 
     console.print(Columns(renderables))
+
+    try:
+        os.rename(
+            rename_dir,
+            os.path.join(os.path.dirname(rename_dir), format_punctuations(dir_title)),
+        )
+    except:
+        pass
+
     oldfilespath = os.path.join(os.path.dirname(dir), "ORIGINAL_EPISODE_FILENAMES")
 
     if not os.path.exists(oldfilespath):
@@ -218,39 +242,54 @@ def ani_parse_dir(
 
 
 def config_format_parse(format, args):
-    format_split = re.findall(r"{[^}]*}|[\s\S]", format)
+    format_split = regex.split(r"{((?:[^{}]|(?R))*)}", format)
+
+    format_split = list(filter(None, format_split))
 
     for i, arg in enumerate(format_split[:]):
-        if str(arg).startswith("{") and str(arg).endswith("}"):
-            arg = str(arg).strip("{}")
+        arg_split = regex.split(r"([\\+]|[\&+]|[\|]|[\s+])", arg)
 
-            arg_split = re.split(r"([\\+]|[\&+]|[\|]|[\s+])", arg)
+        default = ""
 
-            default = ""
-
-            if arg_split[len(arg_split) - 1] != "":
-                default = arg_split[len(arg_split) - 1]
-
+        if arg_split[len(arg_split) - 2] == "|":
+            default = arg_split[len(arg_split) - 1]
             arg_split = arg_split[:-2]
 
-            arg_split = list(filter(None, arg_split))
+        arg_split = list(filter(None, arg_split))
 
-            new_arg_split = []
+        new_arg_split = []
 
-            for j, sub_arg in enumerate(arg_split):
-                if sub_arg == "\\":
-                    pass
-                elif sub_arg == "&":
-                    if arg_split[j - 1] == "\\":
-                        new_arg_split.append(sub_arg)
-                elif str(sub_arg) in args:
-                    if args[sub_arg] == "":
-                        new_arg_split = [default]
-                        break
-                    new_arg_split.append(args[arg_split[j]])
-                else:
+        for j, sub_arg in enumerate(arg_split):
+            if sub_arg == "\\":
+                pass
+            elif sub_arg == "&":
+                if arg_split[j - 1] == "\\":
                     new_arg_split.append(sub_arg)
+            elif str(sub_arg) in args:
+                if args[sub_arg] == None:
+                    new_arg_split = [default]
+                    break
+                new_arg_split.append(args[arg_split[j]])
+            else:
+                new_arg_split.append(sub_arg)
 
-            format_split[i] = "".join(new_arg_split)
+        format_split[i] = "".join(new_arg_split)
+
+    format_split = list(filter(None, format_split))
+
+    while True:
+        if format_split[0].startswith("{") and format_split[0].endswith("}"):
+            del format_split[0]
+            if len(format_split) == 0:
+                break
+        else:
+            break
+
+    for i, arg in enumerate(format_split[:]):
+        if arg.startswith("{") and arg.endswith("}"):
+            format_split[i] = str(format_split[i])[1:-1]
+
+    if len(format_split) == 0:
+        format_split.append("Episode name not found")
 
     return format_punctuations("".join(format_split))

@@ -1,5 +1,5 @@
 import os
-import re
+import regex
 import sys
 import src.utils as utils
 from rich.console import Console
@@ -59,8 +59,8 @@ class Anime:
 
         # Fetching Anime Titles
         for i, id in enumerate(self.anime_dirs):
-            season = re.search(r"(?<=^[Ss])([0-9]+)", self.seasons[i])
-            part = re.search(r"(?<=[Pp])([0-9]+)", self.seasons[i])
+            season = regex.search(r"(?<=^[Ss])([0-9]+)", self.seasons[i])
+            part = regex.search(r"(?<=[Pp])([0-9]+)", self.seasons[i])
 
             season = None if season == None else season.group(1)
             part = None if part == None else part.group(1)
