@@ -11,9 +11,7 @@ clean_jp_title = lambda title: (title.strip().strip("()")).replace("\xa0", " ")
 
 
 async def fetch(session, url, mal_id=None):
-
     async with session.get(url) as response:
-
         html = await response.text()
 
         if mal_id != None:
@@ -25,9 +23,7 @@ async def fetch(session, url, mal_id=None):
 
 
 async def search_anime(titles: list):
-
     async with aiohttp.ClientSession() as session:
-
         tasks = []
 
         for title in titles:
@@ -47,9 +43,7 @@ async def search_anime(titles: list):
 
 
 async def fetch_animes(ids: list) -> list:
-
     async with aiohttp.ClientSession() as session:
-
         tasks = []
 
         for id in ids:
@@ -70,9 +64,7 @@ async def fetch_animes(ids: list) -> list:
 
 
 async def fetch_episodes(anime_data: list):
-
     async with aiohttp.ClientSession() as session:
-
         tasks = []
 
         for anime in anime_data:
@@ -98,10 +90,11 @@ async def fetch_episodes(anime_data: list):
 
 
 async def parse_search_results(html):
-
     html = lxml.html.fromstring(html)
 
-    table = html.xpath('//div[@class="js-categories-seasonal js-block-list list"]/table')
+    table = html.xpath(
+        '//div[@class="js-categories-seasonal js-block-list list"]/table'
+    )
 
     anime_urls = []
     anime_titles = []
@@ -109,35 +102,31 @@ async def parse_search_results(html):
     anime_types = []
 
     for row in table[0].xpath("./tr")[1:]:
-        anime_titles.append(row.xpath('./td/div[@class="title"]/a/strong/text()')[0].strip())
-        anime_types.append(row.xpath('./td[3]/text()')[0].strip())
+        anime_titles.append(
+            row.xpath('./td/div[@class="title"]/a/strong/text()')[0].strip()
+        )
+        anime_types.append(row.xpath("./td[3]/text()")[0].strip())
         anime_urls.append(row.xpath('./td/div[@class="title"]/a/@href')[0].strip())
 
-    
     mal_ids = [re.findall(r"\/anime\/(\d+)", link)[0] for link in anime_urls]
 
     data = []
 
     for id, url, title, type in zip(mal_ids, anime_urls, anime_titles, anime_types):
-        if type == 'TV':
+        if type == "TV":
             data.append({"mal_id": id, "title": title.strip(), "url": url})
 
     return data[:5]
 
 
 async def parse_anime(html, mal_id):
-    
     html = lxml.html.fromstring(html)
 
     title_romanji = (html.xpath("//meta[@property='og:title']/@content")[0]).strip()
 
-    title_english = (
-         html.xpath('//span[text()="English:"]/following-sibling::text()')
-    )
+    title_english = html.xpath('//span[text()="English:"]/following-sibling::text()')
 
-    title_japanese = (
-        html.xpath('//span[text()="Japanese:"]/following-sibling::text()')
-    )
+    title_japanese = html.xpath('//span[text()="Japanese:"]/following-sibling::text()')
 
     if title_english != []:
         title_english = title_english[0].strip()
@@ -181,11 +170,9 @@ async def parse_anime(html, mal_id):
 
 
 async def parse_episodes(htmls, mal_id):
-
     data = {mal_id: {"english": {}, "romanji": {}, "japanese": {}}}
 
     for html in htmls:
-
         html = lxml.html.fromstring(html)
 
         episode_numbers = html.xpath('//td[@class="episode-number nowrap"]/text()')
@@ -194,10 +181,10 @@ async def parse_episodes(htmls, mal_id):
 
         titles_english = []
         title_rj = []
-        
+
         for i, title in enumerate(titles):
-            titles_english.append('')
-            
+            titles_english.append("")
+
             titles_english[i] = title.xpath('a[@class="fl-l fw-b "]/text()')[0]
 
             t_rj = title.xpath('span[@class="di-ib"]/text()')
@@ -206,8 +193,7 @@ async def parse_episodes(htmls, mal_id):
                 title_rj.append(t_rj[0])
 
             else:
-                title_rj.append(f'{titles_english[i]}\xa0{titles_english[i]}')
-
+                title_rj.append(f"{titles_english[i]}\xa0{titles_english[i]}")
 
         titles_romanji, titles_japanese = map(
             list, zip(*[re.split(r"\n+|\xa0+", ele) for ele in title_rj])

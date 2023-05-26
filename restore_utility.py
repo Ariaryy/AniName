@@ -34,7 +34,6 @@ selection = int(Prompt.ask("\n[b][u]Select a Backup File")) - 1
 failed = False
 
 with open(pathAndFilenameList[selection]) as f:
-
     f = json.load(f)
 
     rename_path = list(f.keys())[0]

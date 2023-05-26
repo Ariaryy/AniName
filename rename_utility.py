@@ -1,4 +1,5 @@
-import os, sys
+import os
+import sys
 
 from rich import print as rprint
 from rich.table import Table
@@ -13,16 +14,21 @@ import src.utils as utils
 
 from tkinter import filedialog
 
-settings.init()
-console = Console()
-
 os.system("cls")
+
+settings.init(
+    os.path.join(os.path.dirname(os.path.join(os.path.realpath(__file__))), "conf.ini")
+)
+
+console = Console()
 
 console.print(
     "[b]Make sure to follow the instructions on https://github.com/Ariaryy/AniName before you proceed.\n"
 )
 
-directory = Prompt.ask("[b][u]Path of the Anime Directory (or press enter to select a folder)")
+directory = Prompt.ask(
+    "[b][u]Press Enter to select the Anime Directory (or paste the path)"
+)
 print()
 
 if not os.path.exists(directory):
@@ -54,7 +60,6 @@ if choice == False:
 new_dirs = []
 
 for i, path in enumerate(anime.full_paths):
-
     season_title = anime.anime_titles[i]
     season_number = anime.season_nos[i]
     season_part = anime.part_nos[i]

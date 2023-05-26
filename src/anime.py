@@ -1,4 +1,6 @@
-import os, re, sys
+import os
+import re
+import sys
 import src.utils as utils
 from rich.console import Console
 from rich.progress import track
@@ -18,7 +20,6 @@ class Anime:
     """
 
     def __init__(self, path):
-
         # Used for filenames and displaying on screen
         self.anime_display_titles = {}
         # Anime titles from anime_data
@@ -58,7 +59,6 @@ class Anime:
 
         # Fetching Anime Titles
         for i, id in enumerate(self.anime_dirs):
-
             season = re.search(r"(?<=^[Ss])([0-9]+)", self.seasons[i])
             part = re.search(r"(?<=[Pp])([0-9]+)", self.seasons[i])
 
@@ -80,7 +80,6 @@ class Anime:
             self.anime_display_titles.update({id: anime_display_title})
 
     def get_episodes(self, anime_data):
-
         """
         Returns titles for all episodes in an Anime using MyAnimeList ID
         """

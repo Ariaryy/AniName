@@ -19,11 +19,9 @@ console = Console()
 
 
 def parse_dir(dir_basename):
-
     var = re.search(r"^([\d]+)$|^([\d]+)([Ss][\d]+)([Pp][\d]+)?$", dir_basename)
 
     if var != None:
-
         var = [i for i in var.groups() if i != None]
 
         if len(var) == 1:
@@ -38,7 +36,6 @@ def parse_dir(dir_basename):
 
 
 def format_zeros(number, max_number=1):
-
     """
     Adds an appropriate number of leading zeros to a number based on the max number.
     """
@@ -52,7 +49,6 @@ def format_zeros(number, max_number=1):
 
 
 def format_punctuations(string):
-
     """
     Returns string with punctuations appropriate for Windows file name.
     """
@@ -60,11 +56,10 @@ def format_punctuations(string):
     string = re.sub(":", " ", str(string))
     string = re.sub(r'["\/<>\?\\\| +]+', " ", str(string))
 
-    return string
+    return string.strip()
 
 
 def filename_fix_existing(filename, dirname):
-
     """
     Expands name portion of filename with numeric ' (x)' suffix to
     return filename that doesn't exist already.
@@ -84,7 +79,6 @@ def filename_fix_existing(filename, dirname):
 
 
 def rename(dir, rename_dir, pattern, episodes, dir_title):
-
     """
     Renames files using path, file pattern and episodes fetched using anime_episodes()
     """
@@ -101,7 +95,7 @@ def rename(dir, rename_dir, pattern, episodes, dir_title):
     anitomy_dict = [
         os.path.basename(re.sub(regexp, "", i)) for i in pathAndFilenameList
     ]
-    
+
     anitomy_dict = [(aniparse.parse(i, options=anitomy_options)) for i in anitomy_dict]
 
     for i, file in enumerate(pathAndFilenameList):
@@ -112,7 +106,6 @@ def rename(dir, rename_dir, pattern, episodes, dir_title):
     old_new = {os.path.join(os.path.dirname(rename_dir), dir_title): {}}
 
     for anitomy in anitomy_dict:
-
         pathAndFilename = os.path.join(rename_dir, anitomy["file_name"])
 
         title, ext = os.path.splitext(os.path.basename(pathAndFilename))
@@ -166,7 +159,6 @@ def rename(dir, rename_dir, pattern, episodes, dir_title):
 
 
 def walk_directory(directory: pathlib.Path, tree: Tree) -> None:
-
     """
     Recursively build a Tree with directory contents.
     """
@@ -203,7 +195,6 @@ def walk_directory(directory: pathlib.Path, tree: Tree) -> None:
 def ani_parse_dir(
     directory: pathlib.Path, check_init_path=False, parsed_paths=[]
 ) -> None:
-
     """
     Recursively scans all sub directories to find the ones matching the required format.
     """
@@ -227,84 +218,39 @@ def ani_parse_dir(
 
 
 def config_format_parse(format, args):
-
     format_split = re.findall(r"{[^}]*}|[\s\S]", format)
 
-    for i, arg in enumerate(format_split):
-
-        default = ""
-
+    for i, arg in enumerate(format_split[:]):
         if str(arg).startswith("{") and str(arg).endswith("}"):
-
             arg = str(arg).strip("{}")
+
             arg_split = re.split(r"([\\+]|[\&+]|[\|]|[\s+])", arg)
 
-            arg_split = [k for k in arg_split if k != ""]
+            default = ""
+
+            if arg_split[len(arg_split) - 1] != "":
+                default = arg_split[len(arg_split) - 1]
+
+            arg_split = arg_split[:-2]
+
+            arg_split = list(filter(None, arg_split))
+
+            new_arg_split = []
 
             for j, sub_arg in enumerate(arg_split):
+                if sub_arg == "\\":
+                    pass
+                elif sub_arg == "&":
+                    if arg_split[j - 1] == "\\":
+                        new_arg_split.append(sub_arg)
+                elif str(sub_arg) in args:
+                    if args[sub_arg] == "":
+                        new_arg_split = [default]
+                        break
+                    new_arg_split.append(args[arg_split[j]])
+                else:
+                    new_arg_split.append(sub_arg)
 
-                if sub_arg == "&" and arg_split[j - 1] == "\\":
-                    arg_split[j - 1 : j + 1] = ["".join(arg_split[j - 1 : j + 1])]
-
-            match_count = 0
-
-            for j, sub_arg in enumerate(arg_split):
-
-                if (str(sub_arg) in args and arg_split[j - 1] == "&") or (
-                    str(sub_arg) in args and j == 0
-                ):
-                    arg_split[j] = args[sub_arg]
-                    match_count += 1
-
-                if sub_arg == "|":
-                    default = "".join(arg_split[j + 1 :])
-                    del arg_split[j:]
-
-            arg_split = [k for k in arg_split if k != "&" and k != "|"]
-            arg_split = [k.strip("\\") if k == "\\&" else k for k in arg_split]
-
-            none_count = len([k for k in arg_split if k == None])
-
-            if None in arg_split and none_count == match_count:
-                arg_split = [default]
-            elif None in arg_split:
-                for k, sub_arg in enumerate(arg_split):
-                    if sub_arg == None:
-                        arg_split[k] = default
-                        if arg_split[k - 1].startswith("[") and arg_split[
-                            k - 1
-                        ].endswith("]"):
-                            del arg_split[k - 1]
-                        if arg_split[k + 1].startswith("(") and arg_split[
-                            k + 1
-                        ].endswith(")"):
-                            del arg_split[k + 1]
-
-            for k, sub_arg in enumerate(arg_split):
-                if sub_arg.startswith(("[", "(")) and arg_split[k - 1] != "\\":
-                    sub_arg = sub_arg.strip("[(")
-                    arg_split[k] = sub_arg
-
-                if sub_arg.startswith(("[", "(")) and arg_split[k - 1] == "\\":
-                    del arg_split[k - 1]
-
-                if (
-                    sub_arg.endswith(("]", ")"))
-                    and not sub_arg.startswith(("[", "("))
-                    and arg_split[k - 1] != "\\"
-                ):
-                    sub_arg = sub_arg.strip("])")
-                    arg_split[k] = sub_arg
-
-                if (
-                    not sub_arg.startswith(("[", "("))
-                    and sub_arg.endswith(("]", ")"))
-                    and arg_split[k - 1] == "\\"
-                ):
-                    del arg_split[k - 1]
-
-            arg = arg_split
-
-        format_split[i] = "".join(arg)
+            format_split[i] = "".join(new_arg_split)
 
     return format_punctuations("".join(format_split))
