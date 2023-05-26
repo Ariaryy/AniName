@@ -77,7 +77,11 @@ Here are a few examples of Anime folder names:
 
 ### Anime Episodes Formatting
 
-The <b>Rename Utility</b> relies on the episode number to rename Anime episodes, so make sure that the filename of your Anime episodes contains the episode number. In the event that the rename fails, it is recommended that you use the [Bulk Rename Utility](https://www.bulkrenameutility.co.uk/Download.php) or [PowerRename utility](https://docs.microsoft.com/en-us/windows/powertoys/powerrename) that comes with [Microsoft PowerToys](https://docs.microsoft.com/en-us/windows/powertoys/) to remove everything except the episode number from the episode files and then retry.
+The <b>Rename Utility</b> relies on the episode number to rename Anime episodes, so make sure that the filename of your Anime episodes contains the episode number. 
+
+In the event that the rename fails, it is recommended that you rename the files to remove everything except the episode number from the episode files and then retry.
+
+The [Bulk Rename Utility](https://www.bulkrenameutility.co.uk/Download.php) or [PowerRename utility](https://docs.microsoft.com/en-us/windows/powertoys/powerrename) included with [Microsoft PowerToys](https://docs.microsoft.com/en-us/windows/powertoys/) can be used to automate this process.
 
 ## Rename Utility
 
@@ -88,12 +92,14 @@ To use the <b>Rename Utility</b>, open the command line in the app's folder and 
 python rename_utility.py
 ```
 
-When you launch the <b>Rename Utility</b>, you are asked to specify the <b>Path of the Anime Directory</b>. It refers to the path of the parent folder containing the Anime(s) the app is to rename.
+When you launch the <b>Rename Utility</b>, you are asked to press Enter to select your Anime a folder. It refers to the folder containing the Anime(s) the app is to rename.
+
+Alternatively, you can specify the path of the Anime Directory. It refers to the path of the parent folder containing the Anime(s) the app is to rename.
 
 The path can be obtained by opening the folder containing your Anime(s) using <b>File Explorer</b>, right-clicking on the address bar, and selecting <b>Copy address</b>. The path will be copied to the clipboard which can be pasted into the app.
 
 The <b>Rename Utility</b> will scan for directories/subdirectories matching the format mentioned in 
-[Anime Folder Formatting](#anime-folder-formatting). The process of renaming can be started by confirming the Anime(s) found during the scan by the user.
+[Anime Folder Formatting](#anime-folder-formatting). The process of renaming can be started by confirming the Anime(s) found during the scan.
 
 After the rename, a backup of all previous filenames are stored in a folder called <b>ORIGINAL_EPISODE_FILENAMES</b>. This folder is made outside the path entered while using the <b>Rename Utility</b>. The previous filenames can be restored using the [Restore Utility](#restore-utility).
 
@@ -119,19 +125,15 @@ Examples of <b>Attack on Titan</b> under different <b>Language</b> values:
 
 ### Season & Episode Formatting
 
-The formatting options can contain special sequences that will be replaced when renaming. For example, `{sn}` or `{[S]&sn|}`
+The formatting options can contain special sequences that will be replaced when renaming. For example, `{sn}` or `{S&sn|}`
 
 The field names themselves (the part inside the `{}`) can also have some special formatting:
 
-- <b>Conjunction:</b> Text, variables, prefixes can be merged by using a `&` separator. Example, `{ - &et}`
-
-- <b>Prefix:</b> A value enclosed in `[]` used before a variable. For example, `{[S]&sn}`. this value will not be used if the varible after it is empty.
-
-- <b>Postfix:</b> A value enclosed in `()` used after a variable. For example, `{sn&( season)}`. this value will not be used if the varible after it is empty.
+- <b>Conjunction:</b> Text, variables, prefixes can be merged by using a `&` separator. Example, `{E&en}`
 
 - <b>Default:</b> A literal default value can be specified for when the field is empty using a `|` separator. Example, `{pn|00}`. By default, the default value is empty.
 
-- The above special formatting can be used as text inside the field by using the escape character `\`. Example, `{sn& \& &pn}`
+- The special formatting character `&` can be used as a normal character inside the field by using the escape character `\`. Example, `{sn& \& &pn}`
 
 Available options:
 
