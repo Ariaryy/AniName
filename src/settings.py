@@ -44,7 +44,7 @@ season_format = {S&sn|}{P&pn|}{{ - }}{st|}"""
         os.system("pause")
         sys.exit()
 
-    season_display_format = r"{S&sn|}{P&pn|}{{-}}{st|}"
+    season_display_format = r"{S&sn|}{P&pn|}{{ - }}{st|}"
 
     season_metadata_format = {
         "sn": None,

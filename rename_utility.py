@@ -16,9 +16,12 @@ from tkinter import filedialog
 
 os.system("cls")
 
-settings.init(
-    os.path.join(os.path.dirname(os.path.join(os.path.realpath(__file__))), "conf.ini")
-)
+if getattr(sys, "frozen", False):
+    application_path = os.path.dirname(sys.executable)
+elif __file__:
+    application_path = os.path.dirname(__file__)
+
+settings.init(os.path.join(application_path, "conf.ini"))
 
 console = Console()
 
@@ -68,10 +71,14 @@ for i, path in enumerate(anime.full_paths):
     anime.get_episodes([anime.anime_data[i]])
 
     episodes = anime.episodes[anime.mal_ids[i]]
-    anime_display_title = utils.format_punctuations(anime.anime_display_titles[anime.anime_dirs[i]])
+    anime_display_title = utils.format_punctuations(
+        anime.anime_display_titles[anime.anime_dirs[i]]
+    )
 
     if os.path.exists(os.path.join(os.path.dirname(path), anime_display_title)):
-        anime_display_title = utils.foldername_fix_existing(anime_display_title, os.path.dirname(path))
+        anime_display_title = utils.foldername_fix_existing(
+            anime_display_title, os.path.dirname(path)
+        )
 
     pattern = r"*.mkv"
 
@@ -84,20 +91,20 @@ for i, path in enumerate(anime.full_paths):
     settings.set_ep_prefs(ep_prefs_data)
 
     new_dirs.append(
-        os.path.join(
-            os.path.dirname(path), anime_display_title
-        )
+        os.path.join(os.path.abspath(os.path.dirname(path)), anime_display_title)
     )
 
     print(new_dirs)
 
-    utils.rename(directory, path, pattern, episodes, anime_display_title)
+    utils.rename(
+        directory, os.path.abspath(path), pattern, episodes, anime_display_title
+    )
 
 print()
 
 for dirs in new_dirs:
     tree = Tree(
-        f":open_file_folder: [link file://{os.path.abspath(dirs)}]{os.path.abspath(dirs)}",
+        f":open_file_folder: [link file://{dirs}]{dirs}",
         guide_style="bold bright_blue",
     )
     utils.walk_directory(dirs, tree)
