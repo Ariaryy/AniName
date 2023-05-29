@@ -92,8 +92,6 @@ for i, path in enumerate(anime.full_paths):
 
     new_dirs.append(path.parent / anime_display_title)
 
-    print(new_dirs)
-
     utils.rename(directory, path, episodes, anime_display_title)
 
 print()
