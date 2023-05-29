@@ -17,24 +17,24 @@ import src.settings as settings
 console = Console()
 
 
-def parse_dir(dir_basename):
-    var = regex.search(r"^([\d]+)$|^([\d]+)([Ss][\d]+)([Pp][\d]+)?$", dir_basename)
+def parse_dir(dir_basename: str) -> tuple or None:
+    basename_slice = regex.search(r"^([\d]+)$|^([\d]+)([Ss][\d]+)([Pp][\d]+)?$", dir_basename)
 
-    if var != None:
-        var = [i for i in var.groups() if i != None]
+    if basename_slice != None:
+        basename_slice = [i for i in basename_slice.groups() if i != None]
 
-        if len(var) == 1:
-            var.append(["", ""])
+        if len(basename_slice) == 1:
+            basename_slice.append(["", ""])
 
-        if len(var) == 2:
-            var.append("")
+        if len(basename_slice) == 2:
+            basename_slice.append("")
 
-        return var[0], var[1], var[2]
+        return basename_slice[0], basename_slice[1], basename_slice[2]
 
     return None
 
 
-def format_zeros(number, max_number=1):
+def format_zeros(number: int, max_number=1) -> str:
     """
     Adds an appropriate number of leading zeros to a number based on the max number.
     """
@@ -47,15 +47,15 @@ def format_zeros(number, max_number=1):
     return str(number).zfill(len(str(max_number)))
 
 
-def format_punctuations(string):
+def format_punctuations(dir_basename: str) -> str:
     """
     Returns string with punctuations appropriate for Windows file name.
     """
 
-    string = regex.sub(":", " ", str(string))
-    string = regex.sub(r'["\/<>\?\\\| +]+', " ", str(string))
+    dir_basename = regex.sub(":", " ", str(dir_basename))
+    dir_basename = regex.sub(r'["\/<>\?\\\| +]+', " ", str(dir_basename))
 
-    return string.strip()
+    return dir_basename.strip()
 
 
 def filename_fix_existing(filename: str, dir: Path) -> str:
@@ -94,7 +94,7 @@ def rename(
     ep_data: dict,
     new_dir_name: str,
     match_pattern=r"*.mkv",
-):
+) -> None:
     """
     Renames files using path, file pattern and episodes fetched using anime_episodes()
     """
@@ -209,32 +209,22 @@ def walk_directory(directory: Path, tree: Tree) -> None:
             tree.add(Text(icon) + text_filename)
 
 
-def ani_parse_dir(
-    directory: Path, check_init_path=False, parsed_paths=[]
-) -> list[Path]:
+def ani_parse_dir(dir: Path, match_pattern=r"*.mkv") -> list[Path]:
     """
-    Recursively scans all sub directories to find the ones matching the required format.
+    Scans all sub directories to find the ones matching the required format.
     """
 
-    paths = sorted(list(directory.iterdir()))
+    scan_result = []
 
-    if check_init_path == True:
-        if parse_dir(directory.name) != None:
-            parsed_paths.append(directory)
+    matching_paths = dir.rglob(match_pattern)
+    for path in matching_paths:
+        if not path.parent in scan_result and parse_dir(path.parent.name) != None:
+            scan_result.append(path.parent)
 
-    for path in paths:
-        # Remove hidden files
-        if path.name.startswith("."):
-            continue
-        if path.is_dir():
-            if parse_dir(path.name) != None:
-                parsed_paths.append(path)
-            ani_parse_dir(path, False, parsed_paths)
-
-    return parsed_paths
+    return scan_result
 
 
-def config_format_parse(format, args):
+def config_format_parse(format: str, args: dict) -> str:
     format_split = regex.split(r"{((?:[^{}]|(?R))*)}", format)
 
     format_split = list(filter(None, format_split))
