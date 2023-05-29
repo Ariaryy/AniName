@@ -1,19 +1,18 @@
-import json
-import glob, os, pathlib
 import copy
+import json
+from pathlib import Path
 
 import aniparse
 import regex
-import src.settings as settings
-
-from rich import print
-from rich.console import Console
-from rich.panel import Panel
 from rich.columns import Columns
-from rich.tree import Tree
+from rich.console import Console
 from rich.filesize import decimal
 from rich.markup import escape
+from rich.panel import Panel
 from rich.text import Text
+from rich.tree import Tree
+
+import src.settings as settings
 
 console = Console()
 
@@ -59,14 +58,14 @@ def format_punctuations(string):
     return string.strip()
 
 
-def filename_fix_existing(filename, dirname):
+def filename_fix_existing(filename: str, dir: Path) -> str:
     """
     Expands name portion of filename with numeric ' (x)' suffix to
     return filename that doesn't exist already.
     """
 
     name, ext = filename.rsplit(".", 1)
-    names = [x for x in os.listdir(dirname) if x.startswith(name)]
+    names = [x.name for x in dir.iterdir() if x.name.startswith(name)]
     names = [x.rsplit(".", 1)[0] for x in names]
     suffixes = [x.replace(name, "") for x in names]
     # filter suffixes that match ' (x)' pattern
@@ -78,8 +77,8 @@ def filename_fix_existing(filename, dirname):
     return "%s (%d).%s" % (name, idx, ext)
 
 
-def foldername_fix_existing(foldername, dirname):
-    names = [x for x in os.listdir(dirname) if x.startswith(foldername)]
+def foldername_fix_existing(foldername: str, dir: Path) -> str:
+    names = [x.name for x in dir.iterdir() if x.name.startswith(foldername)]
     suffixes = [x.replace(foldername, "") for x in names]
     suffixes = [x[2:-1] for x in suffixes if x.startswith(" (") and x.endswith(")")]
     indexes = [int(x) for x in suffixes if set(x) <= set("0123456789")]
@@ -89,95 +88,94 @@ def foldername_fix_existing(foldername, dirname):
     return "%s (%d)" % (foldername, idx)
 
 
-def rename(dir, rename_dir, pattern, episodes, dir_title):
+def rename(
+    ani_scan_dir: Path,
+    rename_dir: Path,
+    ep_data: dict,
+    new_dir_name: str,
+    match_pattern=r"*.mkv",
+):
     """
     Renames files using path, file pattern and episodes fetched using anime_episodes()
     """
 
-    pathAndFilenameList = sorted(list(glob.iglob(os.path.join(rename_dir, pattern))))
+    ep_file_paths = sorted(list((rename_dir).glob(match_pattern)))
 
-    renderables = []
+    console_renderables = []
 
     anitomy_options = {"allowed_delimiters": " -_.&+,|"}
 
-    regexp = regex.compile(r"([Pp][\d]+)")
-
     # Removes part number so that Anitomy doesn't fail
-    anitomy_dict = [
-        os.path.basename(regex.sub(regexp, "", i)) for i in pathAndFilenameList
-    ]
+    anitomy_dict = [regex.sub(r"([Pp][\d]+)", "", i.name) for i in ep_file_paths]
 
     anitomy_dict = [(aniparse.parse(i, options=anitomy_options)) for i in anitomy_dict]
 
-    for i, file in enumerate(pathAndFilenameList):
-        anitomy_dict[i]["file_name"] = os.path.basename(file)
+    for i, ep_file in enumerate(ep_file_paths):
+        anitomy_dict[i]["file_name"] = ep_file.name
 
     anitomy_dict = [i for i in anitomy_dict if "episode_number" in i]
 
-    old_new = {os.path.join(os.path.dirname(rename_dir), dir_title): {}}
+    backup_ep_names = {str(rename_dir.parent / new_dir_name): {}}
 
     for anitomy in anitomy_dict:
-        pathAndFilename = os.path.join(rename_dir, anitomy["file_name"])
+        ep_file_path = rename_dir / anitomy["file_name"]
 
-        title, ext = os.path.splitext(os.path.basename(pathAndFilename))
+        old_ep_filename = ep_file_path.stem
+        file_ext = ep_file_path.suffix
 
-        ep_no = format_zeros(anitomy["episode_number"], len(episodes))
+        ep_no = format_zeros(anitomy["episode_number"], len(ep_data))
 
-        episodeName = episodes[ep_no]
+        episode_title = ep_data[ep_no]
 
         ep_title_prefs = copy.deepcopy(settings.ep_prefs)
 
-        ep_title_prefs.update({"en": ep_no, "et": episodeName})
+        ep_title_prefs.update({"en": ep_no, "et": episode_title})
 
-        rename_string = (
-            config_format_parse(settings.episode_format, ep_title_prefs) + ext
+        new_ep_filename = (
+            config_format_parse(settings.episode_format, ep_title_prefs) + file_ext
         )
 
         if (
-            os.path.exists(os.path.join(rename_dir, rename_string))
-            and os.path.join(rename_dir, rename_string) != pathAndFilename
-        ):
-            rename_string = filename_fix_existing(rename_string, rename_dir)
+            rename_dir / new_ep_filename
+        ).exists() and rename_dir / new_ep_filename != ep_file_path:
+            new_ep_filename = filename_fix_existing(new_ep_filename, rename_dir)
 
         try:
-            os.rename(pathAndFilename, os.path.join(rename_dir, rename_string))
-            renderables.append(Panel(f"[b]{title}\n\n[green]{rename_string}"))
+            ep_file_path.rename(rename_dir / new_ep_filename)
 
-            old_new[os.path.join(os.path.dirname(rename_dir), dir_title)].update(
-                {f"{rename_string}": f"{title}{ext}"}
+            console_renderables.append(
+                Panel(f"[b]{old_ep_filename + file_ext}\n\n[green]{new_ep_filename}")
+            )
+
+            backup_ep_names[str(rename_dir.parent / new_dir_name)].update(
+                {f"{new_ep_filename}": f"{old_ep_filename}{file_ext}"}
             )
         except:
-            renderables.append(Panel(f"[b]{title}\n\n[red]Failed to rename"))
+            console_renderables.append(
+                Panel(f"[b]{old_ep_filename}\n\n[red]Failed to rename")
+            )
 
-    console.print(Columns(renderables))
+    console.print(Columns(console_renderables))
 
     try:
-        os.rename(
-            rename_dir,
-            os.path.join(os.path.dirname(rename_dir), dir_title),
-        )
+        rename_dir.rename(rename_dir.parent / new_dir_name)
     except:
         pass
 
-    oldfilespath = os.path.join(os.path.dirname(dir), "ORIGINAL_EPISODE_FILENAMES")
+    backup_dir = ani_scan_dir.parent / "ORIGINAL_EPISODE_FILENAMES"
 
-    if not os.path.exists(oldfilespath):
-        os.makedirs(oldfilespath)
+    if not backup_dir.exists():
+        backup_dir.mkdir()
 
     with open(
-        os.path.join(
-            oldfilespath,
-            filename_fix_existing(
-                f"{dir_title}.json", oldfilespath
-            ),
-        ),
+        backup_dir / filename_fix_existing(f"{new_dir_name}.json", backup_dir),
         "w",
         encoding="utf-8",
     ) as f:
-        f.write(json.dumps(old_new, indent=4))
+        f.write(json.dumps(backup_ep_names, indent=4))
 
 
-def walk_directory(directory: pathlib.Path, tree: Tree) -> None:
+def walk_directory(directory: Path, tree: Tree) -> None:
     """
     Recursively build a Tree with directory contents.
     """
@@ -186,7 +184,7 @@ def walk_directory(directory: pathlib.Path, tree: Tree) -> None:
 
     # Sort dirs first then by filename
     paths = sorted(
-        pathlib.Path(directory).iterdir(),
+        directory.iterdir(),
         key=lambda path: (path.is_file(), path.name.lower()),
     )
     for path in paths:
@@ -196,32 +194,32 @@ def walk_directory(directory: pathlib.Path, tree: Tree) -> None:
         if path.is_dir():
             style = "dim" if path.name.startswith("__") else ""
             branch = tree.add(
-                f"[bold magenta]:open_file_folder: [link file://{path}]{escape(path.name)}",
+                f"[bold magenta]:open_file_folder: [link {path.as_uri()}]{escape(path.name)}",
                 style=style,
                 guide_style=style,
             )
             walk_directory(path, branch)
         else:
             text_filename = Text(path.name, "green")
-            text_filename.highlight_regex(r"\..*$", "bold red")
-            text_filename.stylize(f"link file://{path}")
-            file_size = path.stat().st_size
-            text_filename.append(f" ({decimal(file_size)})", "blue")
+            #text_filename.highlight_regex(r"\..*$", "bold red")
+            text_filename.stylize(f"link {path.as_uri()}")
+            #file_size = path.stat().st_size
+            #text_filename.append(f" ({decimal(file_size)})", "blue")
             icon = "📺 " if path.suffix == ".mkv" else "📄 "
             tree.add(Text(icon) + text_filename)
 
 
 def ani_parse_dir(
-    directory: pathlib.Path, check_init_path=False, parsed_paths=[]
-) -> None:
+    directory: Path, check_init_path=False, parsed_paths=[]
+) -> list[Path]:
     """
     Recursively scans all sub directories to find the ones matching the required format.
     """
 
-    paths = sorted(pathlib.Path(directory).iterdir())
+    paths = sorted(list(directory.iterdir()))
 
     if check_init_path == True:
-        if parse_dir(os.path.basename(directory)) != None:
+        if parse_dir(directory.name) != None:
             parsed_paths.append(directory)
 
     for path in paths:

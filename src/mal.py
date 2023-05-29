@@ -1,8 +1,9 @@
-import aiohttp
 import asyncio
+from urllib.parse import quote
+
+import aiohttp
 import lxml.html
 import regex
-from urllib.parse import quote
 
 asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 

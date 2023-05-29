@@ -1,12 +1,15 @@
+import asyncio
 import os
-import regex
 import sys
-import src.utils as utils
+from pathlib import Path
+
+import regex
 from rich.console import Console
 from rich.progress import track
-import asyncio
-import src.settings as settings
+
 import src.mal as mal
+import src.settings as settings
+import src.utils as utils
 
 asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
@@ -19,7 +22,7 @@ class Anime:
     Extracts Anime information from a directory containing Anime Seasons/Episodes
     """
 
-    def __init__(self, path):
+    def __init__(self, path: Path):
         # Used for filenames and displaying on screen
         self.anime_display_titles = {}
         # Anime titles from anime_data
@@ -47,11 +50,11 @@ class Anime:
             sys.exit()
 
         # Folder names from path
-        self.anime_dirs = [os.path.basename(i) for i in self.full_paths]
+        self.anime_dirs = [i.name for i in self.full_paths]
 
         # Parse folder names
         for i in self.full_paths:
-            mal_id, season_no, part_no = utils.parse_dir(os.path.basename(i))
+            mal_id, season_no, part_no = utils.parse_dir(i.name)
             self.mal_ids.append(mal_id)
             self.seasons.append(f"{season_no}{part_no}")
 

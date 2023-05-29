@@ -1,24 +1,36 @@
-import glob, os, json, pathlib, sys
-import src.utils as utils
+import json
+import os
+import sys
+from pathlib import Path
+from tkinter import filedialog
 
 from rich import print
-from rich.table import Table
+from rich.columns import Columns
 from rich.console import Console
 from rich.panel import Panel
-from rich.columns import Columns
-from rich.tree import Tree
 from rich.prompt import Confirm, Prompt
+from rich.table import Table
+from rich.tree import Tree
+
+import src.utils as utils
 
 os.system("cls")
 
 console = Console()
 
-console.print("[b][u]Path of the folder conatining old episode titles backup files:\n")
-dir = input()
 
-pathAndFilenameList = sorted(list(glob.iglob(os.path.join(dir, r"*.json"))))
+dir = Prompt.ask(
+    "[b][u]Press Enter to select the folder containing the backup files (or paste the path)"
+)
 
-anime_list = [os.path.splitext(os.path.basename(i))[0] for i in pathAndFilenameList]
+if not Path(dir).exists() or dir == "":
+    dir = filedialog.askdirectory(title="Select the Anime Directory")
+
+dir = Path(dir)
+
+json_file_paths = sorted(list(dir.glob(r"*.json")))
+
+anime_list = [i.stem for i in json_file_paths]
 
 table = Table()
 table.add_column("S. No", style="cyan")
@@ -33,12 +45,12 @@ selection = int(Prompt.ask("\n[b][u]Select a Backup File")) - 1
 
 failed = False
 
-with open(pathAndFilenameList[selection]) as f:
+with open(json_file_paths[selection]) as f:
     f = json.load(f)
 
-    rename_path = list(f.keys())[0]
+    rename_path = Path(list(f.keys())[0])
 
-    if not os.path.exists(rename_path):
+    if not rename_path.exists():
         console.print(
             f"""
 [b][red]The directory of the files whose names are to be restored does not exist.
@@ -51,7 +63,7 @@ with open(pathAndFilenameList[selection]) as f:
         os.system("pause")
         sys.exit()
 
-    new_titles = f[rename_path]
+    new_titles = f[list(f.keys())[0]]
 
     tree = Tree(
         "[b][yellow]The selected backup file contains the following episode titles",
@@ -78,11 +90,9 @@ with open(pathAndFilenameList[selection]) as f:
     console.print("[b][u]Restoring File Names\n")
 
     for title in new_titles:
-        if os.path.exists(os.path.join(rename_path, title)):
-            os.rename(
-                os.path.join(rename_path, title),
-                os.path.join(rename_path, new_titles[title]),
-            )
+        if (rename_path / title).exists():
+            (rename_path / title).rename(rename_path / new_titles[title])
+
             renderables = [Panel(f"[b]{title}\n\n[green]{new_titles[title]}")]
             console.print(Columns(renderables))
         else:
@@ -94,13 +104,11 @@ if failed == True:
     print(tree)
     print()
 
-
-directory = os.path.abspath(rename_path)
 tree = Tree(
-    f":open_file_folder: [link file://{directory}]{directory}",
+    f":open_file_folder: [link {rename_path.as_uri()}]{rename_path}",
     guide_style="bold bright_blue",
 )
-utils.walk_directory(pathlib.Path(directory), tree)
+utils.walk_directory(rename_path, tree)
 print()
 print(tree)
 print()

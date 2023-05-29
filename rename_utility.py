@@ -1,27 +1,27 @@
 import os
 import sys
+from pathlib import Path
+from tkinter import filedialog
 
-from rich import print as rprint
-from rich.table import Table
-from rich.console import Console
-from rich.tree import Tree
 from rich import box
+from rich import print as rprint
+from rich.console import Console
 from rich.prompt import Confirm, Prompt
+from rich.table import Table
+from rich.tree import Tree
 
 import src.settings as settings
-from src.anime import Anime
 import src.utils as utils
-
-from tkinter import filedialog
+from src.anime import Anime
 
 os.system("cls")
 
 if getattr(sys, "frozen", False):
-    application_path = os.path.dirname(sys.executable)
+    application_path = Path(sys.executable).parent
 elif __file__:
-    application_path = os.path.dirname(__file__)
+    application_path = Path(__file__).parent
 
-settings.init(os.path.join(application_path, "conf.ini"))
+settings.init(application_path / "conf.ini")
 
 console = Console()
 
@@ -34,8 +34,10 @@ directory = Prompt.ask(
 )
 print()
 
-if not os.path.exists(directory):
+if not Path(directory).exists() or directory == "":
     directory = filedialog.askdirectory(title="Select the Anime Directory")
+
+directory = Path(directory)
 
 anime = Anime(directory)
 
@@ -75,12 +77,10 @@ for i, path in enumerate(anime.full_paths):
         anime.anime_display_titles[anime.anime_dirs[i]]
     )
 
-    if os.path.exists(os.path.join(os.path.dirname(path), anime_display_title)):
+    if (path.parent / anime_display_title).exists():
         anime_display_title = utils.foldername_fix_existing(
-            anime_display_title, os.path.dirname(path)
+            anime_display_title, path.parent
         )
-
-    pattern = r"*.mkv"
 
     ep_prefs_data = {
         "sn": season_number,
@@ -90,34 +90,30 @@ for i, path in enumerate(anime.full_paths):
 
     settings.set_ep_prefs(ep_prefs_data)
 
-    new_dirs.append(
-        os.path.join(os.path.abspath(os.path.dirname(path)), anime_display_title)
-    )
+    new_dirs.append(path.parent / anime_display_title)
 
     print(new_dirs)
 
-    utils.rename(
-        directory, os.path.abspath(path), pattern, episodes, anime_display_title
-    )
+    utils.rename(directory, path, episodes, anime_display_title)
 
 print()
 
 for dirs in new_dirs:
     tree = Tree(
-        f":open_file_folder: [link file://{dirs}]{dirs}",
+        f":open_file_folder: [link {dirs.as_uri()}]{dirs}",
         guide_style="bold bright_blue",
     )
     utils.walk_directory(dirs, tree)
     print()
     rprint(tree)
 
-oldfilespath = os.path.join(os.path.dirname(directory), "ORIGINAL_EPISODE_FILENAMES")
+oldfilespath = directory.parent / "ORIGINAL_EPISODE_FILENAMES"
 console.print(
     f"""
-[b][yellow]Original filenames are backed up in this folder
-[link file://{os.path.abspath(oldfilespath)}]{os.path.abspath(oldfilespath)}[/link file://{os.path.abspath(oldfilespath)}]
+[b][yellow]The original episode filenames are backed up in the following folder:
+[link {oldfilespath.as_uri()}]{oldfilespath}[/link {oldfilespath.as_uri()}]
 
-If you wish to restore the orignal file names, use the restore utility.
+If you wish to restore the orignal episode filenames, use the restore utility.
 \n"""
 )
 
