@@ -64,17 +64,16 @@ if choice == False:
 
 new_dirs = []
 
-for i, path in enumerate(anime.full_paths):
+for i, path in enumerate(anime.anime_dir_paths):
     season_title = anime.anime_titles[i]
     season_number = anime.season_nos[i]
     season_part = anime.part_nos[i]
 
     console.print(f"\n[h1][b][u][yellow]Renaming: {season_title}\n")
-    anime.get_episodes([anime.anime_data[i]])
+    anime.get_episodes(anime.mal_ids[i])
 
-    episodes = anime.episodes[anime.mal_ids[i]]
     anime_display_title = utils.format_punctuations(
-        anime.anime_display_titles[anime.anime_dirs[i]]
+        anime.anime_display_titles[anime.anime_dir_names[i]]
     )
 
     if (path.parent / anime_display_title).exists():
@@ -92,7 +91,9 @@ for i, path in enumerate(anime.full_paths):
 
     new_dirs.append(path.parent / anime_display_title)
 
-    utils.rename(directory, path, episodes, anime_display_title)
+    utils.rename(
+        directory, path, anime.anime_data[anime.mal_ids[i]], anime_display_title
+    )
 
 print()
 

@@ -2,11 +2,12 @@ import copy
 import json
 from pathlib import Path
 
-import aniparse
+from aniparse import parse as aniparse
 import regex
 from rich.columns import Columns
 from rich.console import Console
-from rich.filesize import decimal
+
+# from rich.filesize import decimal
 from rich.markup import escape
 from rich.panel import Panel
 from rich.text import Text
@@ -15,10 +16,13 @@ from rich.tree import Tree
 import src.settings as settings
 
 console = Console()
+ANITOMY_OPTIONS = {"allowed_delimiters": " -_.&+,|"}
 
 
 def parse_dir(dir_basename: str) -> tuple or None:
-    basename_slice = regex.search(r"^([\d]+)$|^([\d]+)([Ss][\d]+)([Pp][\d]+)?$", dir_basename)
+    basename_slice = regex.search(
+        r"^([\d]+)$|^([\d]+)([Ss][\d]+)([Pp][\d]+)?$", dir_basename
+    )
 
     if basename_slice != None:
         basename_slice = [i for i in basename_slice.groups() if i != None]
@@ -32,6 +36,19 @@ def parse_dir(dir_basename: str) -> tuple or None:
         return basename_slice[0], basename_slice[1], basename_slice[2]
 
     return None
+
+
+def get_local_ep_range(ani_dir: Path, match_pattern=r"*.mkv"):
+    ep_paths = list(ani_dir.glob(match_pattern))
+
+    re_sub = lambda dir_name: regex.sub(r"([Pp][\d]+)", "", dir_name)
+
+    ep_no_list = [
+        int(aniparse(re_sub(ep_path.stem), options=ANITOMY_OPTIONS)["episode_number"])
+        for ep_path in ep_paths
+    ]
+
+    return min(ep_no_list), max(ep_no_list)
 
 
 def format_zeros(number: int, max_number=1) -> str:
@@ -103,12 +120,10 @@ def rename(
 
     console_renderables = []
 
-    anitomy_options = {"allowed_delimiters": " -_.&+,|"}
-
     # Removes part number so that Anitomy doesn't fail
     anitomy_dict = [regex.sub(r"([Pp][\d]+)", "", i.name) for i in ep_file_paths]
 
-    anitomy_dict = [(aniparse.parse(i, options=anitomy_options)) for i in anitomy_dict]
+    anitomy_dict = [(aniparse(i, options=ANITOMY_OPTIONS)) for i in anitomy_dict]
 
     for i, ep_file in enumerate(ep_file_paths):
         anitomy_dict[i]["file_name"] = ep_file.name
@@ -123,13 +138,15 @@ def rename(
         old_ep_filename = ep_file_path.stem
         file_ext = ep_file_path.suffix
 
-        ep_no = format_zeros(anitomy["episode_number"], len(ep_data))
+        ep_no = anitomy["episode_number"]
 
-        episode_title = ep_data[ep_no]
+        episode_title = ep_data["episode_titles"][str(ep_no)]
 
         ep_title_prefs = copy.deepcopy(settings.ep_prefs)
 
-        ep_title_prefs.update({"en": ep_no, "et": episode_title})
+        ep_title_prefs.update(
+            {"en": format_zeros(ep_no, ep_data["local_max_ep"]), "et": episode_title}
+        )
 
         new_ep_filename = (
             config_format_parse(settings.episode_format, ep_title_prefs) + file_ext
@@ -201,10 +218,10 @@ def walk_directory(directory: Path, tree: Tree) -> None:
             walk_directory(path, branch)
         else:
             text_filename = Text(path.name, "green")
-            #text_filename.highlight_regex(r"\..*$", "bold red")
+            # text_filename.highlight_regex(r"\..*$", "bold red")
             text_filename.stylize(f"link {path.as_uri()}")
-            #file_size = path.stat().st_size
-            #text_filename.append(f" ({decimal(file_size)})", "blue")
+            # file_size = path.stat().st_size
+            # text_filename.append(f" ({decimal(file_size)})", "blue")
             icon = "📺 " if path.suffix == ".mkv" else "📄 "
             tree.add(Text(icon) + text_filename)
 

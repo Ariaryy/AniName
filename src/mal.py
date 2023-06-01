@@ -43,7 +43,7 @@ async def search_anime(titles: list):
         return animes
 
 
-async def fetch_animes(ids: list) -> list:
+async def fetch_animes(ids: list, season_title_lang: str, ep_title_lang: str) -> dict:
     async with aiohttp.ClientSession() as session:
         tasks = []
 
@@ -57,20 +57,26 @@ async def fetch_animes(ids: list) -> list:
 
     for item in data:
         for id in item:
-            tasks.append(asyncio.create_task(parse_anime(item[id], id)))
+            tasks.append(
+                asyncio.create_task(
+                    parse_anime(item[id], id, season_title_lang, ep_title_lang)
+                )
+            )
 
     animes = await asyncio.gather(*tasks)
 
     return animes
 
 
-async def fetch_episodes(anime_data: list):
+async def fetch_episodes(anime_data: list, ep_title_language: str):
     async with aiohttp.ClientSession() as session:
         tasks = []
 
         for anime in anime_data:
             id = list(anime.keys())[0]
-            pages = anime[id]["ep_pages"]
+            min_ep_slice = (anime[id]["local_min_ep"] - 1) // 100
+            max_ep_slice = ((anime[id]["local_max_ep"] - 1) // 100) + 1
+            pages = anime[id]["ep_pages"][min_ep_slice:max_ep_slice]
             for page in pages:
                 tasks.append(asyncio.create_task(fetch(session, page, id)))
 
@@ -83,7 +89,9 @@ async def fetch_episodes(anime_data: list):
     tasks = []
 
     for id in data_clean:
-        tasks.append(asyncio.create_task(parse_episodes(data_clean[id], id)))
+        tasks.append(
+            asyncio.create_task(parse_episodes(data_clean[id], ep_title_language))
+        )
 
     episodes = await asyncio.gather(*tasks)
 
@@ -120,7 +128,10 @@ async def parse_search_results(html):
     return data[:5]
 
 
-async def parse_anime(html, mal_id):
+async def parse_anime(html, mal_id, season_title_lang, ep_title_lang):
+
+    episode_titles = await parse_episodes([html], ep_title_lang)
+
     html = lxml.html.fromstring(html)
 
     title_romanji = (html.xpath("//meta[@property='og:title']/@content")[0]).strip()
@@ -147,31 +158,40 @@ async def parse_anime(html, mal_id):
 
     last_page = html.xpath('//div[@class="pagination ac"]/a[last()]/@href')
 
-    if len(last_page) == 0:
-        ep_pages = [f"https://myanimelist.net/anime/{mal_id}/_/episode?offset=0"]
-    else:
+    ep_pages = None
+
+    if len(last_page) != 0:
         max_offset = int(regex.findall(r"\?offset=(\d+)$", last_page[0])[0])
         ep_pages = [
             f"https://myanimelist.net/anime/{mal_id}/_/episode?offset={i}"
-            for i in range(0, max_offset + 100, 100)
+            for i in range(1, max_offset + 100, 100)
         ]
+
+    anime_title = title_english
+
+    if season_title_lang == "japanese":
+        anime_title = title_japanese
+    
+    if season_title_lang == "romanji":
+        anime_title = title_romanji
 
     data = {
         mal_id: {
-            "english": title_english,
-            "romanji": title_romanji,
-            "japanese": title_japanese,
+            "anime_title": anime_title,
             "type": anime_type,
             "episodes": total_episodes,
             "ep_pages": ep_pages,
         }
     }
 
+    # Parses the first 100 or less episode titles from the already loaded HTML
+    data[mal_id]["episode_titles"] = episode_titles
+
     return data
 
 
-async def parse_episodes(htmls, mal_id):
-    data = {mal_id: {"english": {}, "romanji": {}, "japanese": {}}}
+async def parse_episodes(htmls, ep_title_lang):
+    data = {"english": {}, "romanji": {}, "japanese": {}}
 
     for html in htmls:
         html = lxml.html.fromstring(html)
@@ -203,8 +223,8 @@ async def parse_episodes(htmls, mal_id):
         for title_en, title_ro, title_jp, ep_no in zip(
             titles_english, titles_romanji, titles_japanese, episode_numbers
         ):
-            data[mal_id]["english"].update({ep_no: (title_en)})
-            data[mal_id]["romanji"].update({ep_no: (title_ro)})
-            data[mal_id]["japanese"].update({ep_no: (title_jp)})
+            data["english"].update({ep_no: (title_en)})
+            data["romanji"].update({ep_no: (title_ro)})
+            data["japanese"].update({ep_no: (title_jp)})
 
-    return data
+    return data[ep_title_lang]
