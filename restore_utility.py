@@ -1,6 +1,9 @@
+"""
+The main application to restore episode filenames from backup.
+"""
+
 import json
 import os
-import sys
 from pathlib import Path
 from tkinter import filedialog
 
@@ -12,23 +15,32 @@ from rich.prompt import Confirm, Prompt
 from rich.table import Table
 from rich.tree import Tree
 
-import src.utils as utils
+from src import HandleError
+from src.utils import walk_directory
 
-os.system("cls")
+os.system("cls||clear")
 
 console = Console()
 
 
-dir = Prompt.ask(
+def pause() -> None:
+    """
+    Pauses program until the Enter key is pressed
+    """
+
+    input("Press the Enter key to continue . . .")
+
+
+INPUT_DIR = Prompt.ask(
     "[b][u]Press Enter to select the folder containing the backup files (or paste the path)"
 )
 
-if not Path(dir).exists() or dir == "":
-    dir = filedialog.askdirectory(title="Select the Anime Directory")
+if not Path(INPUT_DIR).exists() or INPUT_DIR == "":
+    INPUT_DIR = filedialog.askdirectory(title="Select the Anime Directory")
 
-dir = Path(dir)
+INPUT_DIR = Path(INPUT_DIR)
 
-json_file_paths = sorted(list(dir.glob(r"*.json")))
+json_file_paths = sorted(list(INPUT_DIR.glob(r"*.json")))
 
 anime_list = [i.stem for i in json_file_paths]
 
@@ -41,27 +53,17 @@ for i, anime in enumerate(anime_list):
 
 console.print(table)
 
-selection = int(Prompt.ask("\n[b][u]Select a Backup File")) - 1
+SELECTION = int(Prompt.ask("\n[b][u]Select a Backup File")) - 1
 
 failed = False
 
-with open(json_file_paths[selection]) as f:
+with open(json_file_paths[SELECTION], encoding='utf-8') as f:
     f = json.load(f)
 
     rename_path = Path(list(f.keys())[0])
 
     if not rename_path.exists():
-        console.print(
-            f"""
-[b][red]The directory of the files whose names are to be restored does not exist.
-        
-[yellow]Please make sure the following path exists:
-[u]{rename_path}[not u]
-        
-[yellow]Alternatively, you can try editing the path in the [u]{anime_list[selection]}.json[not u] file to fix the issue.\n"""
-        )
-        os.system("pause")
-        sys.exit()
+        HandleError.restore_not_found(str(rename_path), anime_list[SELECTION])
 
     new_titles = f[list(f.keys())[0]]
 
@@ -76,10 +78,10 @@ with open(json_file_paths[selection]) as f:
     print(tree)
     print()
 
-    choice = Confirm.ask("[green]Proceed to restore filename?")
+    CHOICE = Confirm.ask("[green]Proceed to restore filename?")
 
-    if choice == False:
-        sys.exit()
+    if CHOICE is False:
+        exit()
 
     print()
 
@@ -99,7 +101,7 @@ with open(json_file_paths[selection]) as f:
             failed = True
             tree.add(title)
 
-if failed == True:
+if failed is True:
     print()
     print(tree)
     print()
@@ -108,8 +110,8 @@ tree = Tree(
     f":open_file_folder: [link {rename_path.as_uri()}]{rename_path}",
     guide_style="bold bright_blue",
 )
-utils.walk_directory(rename_path, tree)
+walk_directory(rename_path, tree)
 print()
 print(tree)
 print()
-os.system("pause")
+pause()

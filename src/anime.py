@@ -1,113 +1,196 @@
+"""
+Contains dataclasses for storing data of Anime(s)
+"""
+
 import asyncio
-import os
-import sys
+import json
+from dataclasses import dataclass, field
 from pathlib import Path
+from sys import platform
 
-import regex
-from rich.console import Console
+from rich.panel import Panel
 
-from src.mal import fetch_animes, fetch_episodes
-import src.settings as settings
-import src.utils as utils
+from src import utils
 
-asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+from .config import Config
+from .error_handler import HandleError
+from .mal import fetch_animes, fetch_episodes
 
-console = Console()
+if platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 
+@dataclass(slots=True)
 class Anime:
-
     """
-    Extracts Anime information from a directory containing Anime Seasons/Episodes
+    Dataclass for an Anime
     """
 
-    def __init__(self, path: Path):
-        # Used for filenames and displaying on screen
-        self.anime_display_titles = {}
-        # Anime titles from anime_data
-        self.anime_titles = []
-        # MAL IDs from folder name
-        self.mal_ids = []
-        # Season Part from folder name
-        self.seasons = []
-        # Formatted season numbers
-        self.season_nos = []
-        # Formatted part numbers
-        self.part_nos = []
-        # Path of Anime(s)
-        self.anime_dir_paths = []
-        # Anime data from MAL
-        self.anime_data = {}
+    mal_id: int
+    season: int
+    part: int
+    dir_path: Path
+    local_ep_range: dict
+    ep_pages: list = field(init=False, default=None)
+    title: str = field(init=False, default_factory=str)
+    type: str = field(init=False, default_factory=str)
+    total_eps: int = field(init=False, default_factory=int)
+    ep_titles: dict = field(init=False, default_factory=dict)
+    rename_log: list[Panel] = field(init=False, default_factory=list)
 
-        self.EP_TITLE_LANG = settings.episode_lang
-        self.ANIME_TITLE_LANG = settings.season_lang
-
-        self.anime_dir_paths = utils.ani_parse_dir(path)
-
-        if len(self.anime_dir_paths) == 0:
-            console.print(
-                """[b][red]No directories matching the scan format were found.\n[yellow]Learn more about directory formatting: [blue]https://github.com/Ariaryy/AniName#anime-folder-formatting\n"""
-            )
-            os.system("pause")
-            sys.exit()
-
-        # Folder names from path
-        self.anime_dir_names = [path.name for path in self.anime_dir_paths]
-
-        # Parse folder names
-        for path in self.anime_dir_paths:
-            mal_id, season_no, part_no = utils.parse_dir(path.name)
-            self.mal_ids.append(mal_id)
-            self.seasons.append(f"{season_no}{part_no}")
-
-        fetched_anime_data = asyncio.run(
-            fetch_animes(self.mal_ids, self.ANIME_TITLE_LANG, self.EP_TITLE_LANG)
-        )
-
-        [self.anime_data.update(data) for data in fetched_anime_data]
-
-        # Fetching Anime Titles
-        for path, id in enumerate(self.anime_dir_names):
-            season = regex.search(r"(?<=^[Ss])([0-9]+)", self.seasons[path])
-            part = regex.search(r"(?<=[Pp])([0-9]+)", self.seasons[path])
-
-            season = None if season == None else season.group(1)
-            part = None if part == None else part.group(1)
-
-            self.season_nos.append(utils.format_zeros(season))
-            self.part_nos.append(utils.format_zeros(part))
-
-            (
-                self.anime_data[self.mal_ids[path]]["local_min_ep"],
-                self.anime_data[self.mal_ids[path]]["local_max_ep"],
-            ) = utils.get_local_ep_range(self.anime_dir_paths[path])
-
-            title = self.anime_data[self.mal_ids[path]]["anime_title"]
-
-            format_args = {"sn": season, "pn": part, "st": title}
-
-            anime_display_title = utils.config_format_parse(
-                settings.season_display_format, format_args
-            )
-
-            self.anime_titles.append(title)
-            self.anime_display_titles.update({id: anime_display_title})
-
-    def get_episodes(self, mal_id):
+    def update_from_dict(self, new):
         """
-        Returns titles for all episodes in an Anime using MyAnimeList ID
+        Update self using dictonary.
         """
 
-        if self.anime_data[mal_id]["local_max_ep"] <= 100:
+        for key, value in new.items():
+            if hasattr(self, key):
+                setattr(self, key, value)
+
+    def get_episodes(self, ep_title_lang):
+        """
+        Fetches episode titles.
+        """
+
+        if self.local_ep_range["max"] <= 100:
             return
 
-        ep_nos = []
-        ep_titles = []
+        episodes = asyncio.run(
+            fetch_episodes(
+                self.mal_id,
+                self.ep_pages,
+                self.local_ep_range["min"],
+                self.local_ep_range["max"],
+                ep_title_lang,
+            )
+        )
 
-        episodes = asyncio.run(fetch_episodes(self.anime_data, self.EP_TITLE_LANG))
+        self.ep_titles.update(episodes[0])
 
-        (*ep_nos,) = episodes
-        (*ep_titles,) = episodes.values()
+    def rename_episodes(
+        self,
+        ani_scan_dir: Path,
+        new_dir_name: str,
+        ep_title_format: str,
+        match_pattern=r"*.mkv",
+    ) -> None:
+        """
+        Renames episode fileanmes using episode data.
+        """
 
-        for i, ep_no in enumerate(ep_nos):
-            self.anime_data[mal_id]["episode_titles"].update({ep_no: ep_titles[i]})
+        ep_file_paths = sorted(list(self.dir_path.glob(match_pattern)))
+
+        anitomy_dict = utils.create_anitomy_dict(ep_file_paths)
+
+        backup_ep_names = {str(self.dir_path.parent / new_dir_name): {}}
+
+        for anitomy in anitomy_dict:
+            ep_file_path = self.dir_path / anitomy["file_name"]
+
+            old_ep_filename = ep_file_path.stem
+            file_ext = ep_file_path.suffix
+
+            ep_no = anitomy["episode_number"]
+
+            episode_title = self.ep_titles[str(ep_no)]
+
+            ep_title_dict = {
+                "sn": self.season,
+                "pn": self.part,
+                "st": self.title,
+                "en": utils.format_zeros(ep_no, self.local_ep_range["max"]),
+                "et": episode_title,
+            }
+
+            new_ep_filename = (
+                Config.config_format_parse(ep_title_format, ep_title_dict) + file_ext
+            )
+
+            if (
+                self.dir_path / new_ep_filename
+            ).exists() and self.dir_path / new_ep_filename != ep_file_path:
+                new_ep_filename = utils.path_fix_exisiting(
+                    new_ep_filename, self.dir_path
+                )
+
+            try:
+                ep_file_path.rename(self.dir_path / new_ep_filename)
+
+                self.rename_log.append(
+                    Panel(
+                        f"[b]{old_ep_filename + file_ext}\n\n[green]{new_ep_filename}"
+                    )
+                )
+
+                backup_ep_names[str(self.dir_path.parent / new_dir_name)].update(
+                    {f"{new_ep_filename}": f"{old_ep_filename}{file_ext}"}
+                )
+            except:
+                self.rename_log.append(
+                    Panel(f"[b]{old_ep_filename}\n\n[red]Failed to rename")
+                )
+
+        self.dir_path.rename(self.dir_path.parent / new_dir_name)
+
+        backup_dir = ani_scan_dir.parent / "ORIGINAL_EPISODE_FILENAMES"
+
+        if not backup_dir.exists():
+            backup_dir.mkdir()
+
+        with open(
+            backup_dir / utils.path_fix_exisiting(f"{new_dir_name}.json", backup_dir),
+            "w",
+            encoding="utf-8",
+        ) as file:
+            file.write(json.dumps(backup_ep_names, indent=4))
+
+
+@dataclass(slots=True)
+class AnimeList:
+    """
+    A Dataclass that contains a list of objects of the Anime dataclass.
+    """
+
+    mal_id_list: list[int] = field(default_factory=list)
+    animes: list[Anime] = field(default_factory=list)
+
+    def get_animes(self, parent_dir_path: Path, lang_options: dict) -> None:
+        """
+        Find dir(s) matching format and fetch Anime data.
+        """
+
+        anime_dir_paths = utils.find_ani_subdir(parent_dir_path)
+
+        anime_title_lang = lang_options["anime_title_lang"]
+        ep_title_lang = lang_options["ep_title_lang"]
+
+        if len(anime_dir_paths) == 0:
+            raise NoMatchingDir
+
+        for path in anime_dir_paths:
+            mal_id, season_no, part_no = utils.parse_dir_basename(path.name)
+            local_ep_min, local_ep_max = utils.get_local_ep_range(path)
+            self.mal_id_list.append(int(mal_id))
+            self.animes.append(
+                Anime(
+                    mal_id=mal_id,
+                    season=season_no,
+                    part=part_no,
+                    dir_path=path,
+                    local_ep_range={"min": local_ep_min, "max": local_ep_max},
+                )
+            )
+
+        fetched_anime_data = asyncio.run(
+            fetch_animes(self.mal_id_list, anime_title_lang, ep_title_lang)
+        )
+
+        for i, data in enumerate(fetched_anime_data):
+            self.animes[i].update_from_dict(data)
+
+
+class NoMatchingDir(Exception):
+    """Raised when no directories matching the scan format were found."""
+
+    def __init__(self) -> None:
+        HandleError.no_matching_dir()

@@ -1,3 +1,7 @@
+"""
+The main application to rename episode filenames.
+"""
+
 import os
 import sys
 from pathlib import Path
@@ -5,41 +9,59 @@ from tkinter import filedialog
 
 from rich import box
 from rich import print as rprint
+from rich.columns import Columns
 from rich.console import Console
 from rich.prompt import Confirm, Prompt
 from rich.table import Table
 from rich.tree import Tree
 
-import src.settings as settings
-import src.utils as utils
-from src.anime import Anime
+from src import AnimeList, Config, utils
 
-os.system("cls")
+os.system("cls||clear")
 
 if getattr(sys, "frozen", False):
-    application_path = Path(sys.executable).parent
-elif __file__:
-    application_path = Path(__file__).parent
-
-settings.init(application_path / "conf.ini")
+    APP_PATH = Path(sys.executable).parent
+else:
+    APP_PATH = Path(__file__).parent
 
 console = Console()
+config = Config()
+
+
+def pause() -> None:
+    """
+    Pauses program until the Enter key is pressed
+    """
+
+    input("Press the Enter key to continue . . .")
+
+
+config.init(APP_PATH / "conf.ini")
 
 console.print(
-    "[b]Make sure to follow the instructions on https://github.com/Ariaryy/AniName before you proceed.\n"
+    """[b]Make sure to follow the instructions on \
+https://github.com/Ariaryy/AniName before you proceed.\n"""
 )
 
-directory = Prompt.ask(
+INPUT_DIR = Prompt.ask(
     "[b][u]Press Enter to select the Anime Directory (or paste the path)"
 )
+
 print()
 
-if not Path(directory).exists() or directory == "":
-    directory = filedialog.askdirectory(title="Select the Anime Directory")
+if not Path(INPUT_DIR).exists() or INPUT_DIR == "":
+    INPUT_DIR = filedialog.askdirectory(title="Select the Anime Directory")
 
-directory = Path(directory)
+INPUT_DIR = Path(INPUT_DIR)
 
-anime = Anime(directory)
+anime_list = AnimeList()
+
+lang_options = {
+    "ep_title_lang": config.ep_title_lang,
+    "anime_title_lang": config.anime_title_lang,
+}
+
+anime_list.get_animes(INPUT_DIR, lang_options)
 
 table = Table(
     title="[b][yellow]Anime(s) Found", box=box.ROUNDED, show_lines=True, highlight=True
@@ -48,65 +70,53 @@ table = Table(
 table.add_column("Title", style="white")
 table.add_column("MAL ID")
 
-for i, title in enumerate(anime.anime_display_titles):
+new_dirs = []
+
+for i, anime in enumerate(anime_list.animes):
+    anime_info_dict = {"sn": anime.season, "pn": anime.part, "st": anime.title}
+    new_dirs.append(
+        anime.dir_path.parent
+        / Config.config_format_parse(config.anime_title_format, anime_info_dict)
+    )
     table.add_row(
-        anime.anime_display_titles[title],
-        f"[b][blue][link https://myanimelist.net/anime/{anime.mal_ids[i]}]{anime.mal_ids[i]}",
+        new_dirs[i].name,
+        f"[b][blue][link https://myanimelist.net/anime/{anime.mal_id}]{anime.mal_id}",
     )
 
 console.print(table)
 
 print()
-choice = Confirm.ask("[green]Proceed?")
 
-if choice == False:
+CHOICE = Confirm.ask("[green]Proceed?")
+
+if CHOICE is False:
     sys.exit()
 
-new_dirs = []
+for i, anime in enumerate(anime_list.animes):
+    console.print(f"\n[h1][b][u][yellow]Renaming: {anime.title}\n")
+    anime.get_episodes(config.ep_title_lang)
 
-for i, path in enumerate(anime.anime_dir_paths):
-    season_title = anime.anime_titles[i]
-    season_number = anime.season_nos[i]
-    season_part = anime.part_nos[i]
-
-    console.print(f"\n[h1][b][u][yellow]Renaming: {season_title}\n")
-    anime.get_episodes(anime.mal_ids[i])
-
-    anime_display_title = utils.format_punctuations(
-        anime.anime_display_titles[anime.anime_dir_names[i]]
-    )
-
-    if (path.parent / anime_display_title).exists():
-        anime_display_title = utils.foldername_fix_existing(
-            anime_display_title, path.parent
+    if (new_dirs[i]).exists():
+        new_dirs[i] = new_dirs[i].parent / utils.path_fix_exisiting(
+            new_dirs[i].name, new_dirs[i].parent
         )
 
-    ep_prefs_data = {
-        "sn": season_number,
-        "pn": season_part,
-        "st": season_title,
-    }
+    anime.rename_episodes(INPUT_DIR, new_dirs[i].name, config.ep_title_format)
 
-    settings.set_ep_prefs(ep_prefs_data)
-
-    new_dirs.append(path.parent / anime_display_title)
-
-    utils.rename(
-        directory, path, anime.anime_data[anime.mal_ids[i]], anime_display_title
-    )
+    console.print(Columns(anime.rename_log))
 
 print()
 
-for dirs in new_dirs:
+for directory in new_dirs:
     tree = Tree(
-        f":open_file_folder: [link {dirs.as_uri()}]{dirs}",
+        f":open_file_folder: [link {directory.as_uri()}]{directory}",
         guide_style="bold bright_blue",
     )
-    utils.walk_directory(dirs, tree)
+    utils.walk_directory(directory, tree)
     print()
     rprint(tree)
 
-oldfilespath = directory.parent / "ORIGINAL_EPISODE_FILENAMES"
+oldfilespath = INPUT_DIR.parent / "ORIGINAL_EPISODE_FILENAMES"
 console.print(
     f"""
 [b][yellow]The original episode filenames are backed up in the following folder:
@@ -116,4 +126,4 @@ If you wish to restore the orignal episode filenames, use the restore utility.
 \n"""
 )
 
-os.system("pause")
+pause()
