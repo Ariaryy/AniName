@@ -4,14 +4,20 @@ Contains functions needed to scrape and parse data from MyAnimeList.
 
 import asyncio
 from sys import platform
-from urllib.parse import quote
 
-import aiohttp
 import lxml.html
 import regex
 
+from . import conf_loader
+
+from .http_session import get_client_session
+
 if platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+ANIME_TITLE_LANG = conf_loader.conf.anime_title_lang
+EP_TITLE_LANG = conf_loader.conf.ep_title_lang
+FIRST_100 = True  # to be used in the future
 
 
 def clean_title(title: str) -> str:
@@ -30,154 +36,28 @@ def clean_jp_title(title: str) -> str:
     return (title.strip().strip("()")).replace("\xa0", " ")
 
 
-async def fetch(session, url, mal_id=None):
+async def fetch(url, mal_id=None):
     """
     Fetch data from url.
     """
+
+    session = await get_client_session()
+
     async with session.get(url) as response:
         html = await response.text()
 
         if mal_id is not None:
-            data = {mal_id: html}
+            data = {mal_id: lxml.html.fromstring(html)}
         else:
-            data = html
+            data = lxml.html.fromstring(html)
 
     return data
 
 
-async def search_anime(titles: list):
-    """
-    Searches Anime via title on MyAnimeList.
-    """
-
-    async with aiohttp.ClientSession() as session:
-        tasks = []
-
-        for title in titles:
-            url = f"https://myanimelist.net/anime.php?q={quote(title)}&cat=anime"
-            tasks.append(asyncio.create_task(fetch(session, url)))
-
-        data = await asyncio.gather(*tasks)
-
-        tasks = []
-
-        for item in data:
-            tasks.append(asyncio.create_task(parse_search_results(item)))
-
-        animes = await asyncio.gather(*tasks)
-
-        return animes
-
-
-async def fetch_animes(
-    mal_ids: list, season_title_lang: str, ep_title_lang: str
-) -> dict:
-    """
-    Fetches Anime data from MyAnimeList.
-    """
-
-    async with aiohttp.ClientSession() as session:
-        tasks = []
-
-        for mal_id in mal_ids:
-            url = f"https://myanimelist.net/anime/{mal_id}/_/episode?offset=0"
-            tasks.append(asyncio.create_task(fetch(session, url, mal_id)))
-
-        data = await asyncio.gather(*tasks)
-
-    tasks = []
-
-    for item in data:
-        for mal_id in item:
-            tasks.append(
-                asyncio.create_task(
-                    parse_anime(item[mal_id], mal_id, season_title_lang, ep_title_lang)
-                )
-            )
-
-    animes = await asyncio.gather(*tasks)
-
-    return animes
-
-
-async def fetch_episodes(
-    mal_id: int, ep_pages: list, min_ep: int, max_ep: int, ep_title_language: str
-):
-    """
-    Fetches episode titles from MyAnimeList.
-    """
-
-    async with aiohttp.ClientSession() as session:
-        tasks = []
-
-        if min_ep <= 100:
-            min_ep += 100
-        min_ep_slice = (min_ep - 1) // 100
-        max_ep_slice = ((max_ep - 1) // 100) + 1
-
-        tasks = [
-            asyncio.create_task(fetch(session, page, mal_id))
-            for page in ep_pages[min_ep_slice:max_ep_slice]
-        ]
-
-        data = await asyncio.gather(*tasks)
-
-    data_clean = {
-        k: [d.get(k) for d in data if d.get(k) is not None] for k in set().union(*data)
-    }
-
-    tasks = [
-        asyncio.create_task(parse_episodes(data_clean[id], ep_title_language))
-        for id in data_clean
-    ]
-
-    episodes = await asyncio.gather(*tasks)
-
-    return episodes
-
-
-async def parse_search_results(html):
-    """
-    Parses results from the search_anime() function
-    """
-
-    html = lxml.html.fromstring(html)
-
-    table = html.xpath(
-        '//div[@class="js-categories-seasonal js-block-list list"]/table'
-    )
-
-    anime_urls = []
-    anime_titles = []
-    mal_ids = []
-    anime_types = []
-
-    for row in table[0].xpath("./tr")[1:]:
-        anime_titles.append(
-            row.xpath('./td/div[@class="title"]/a/strong/text()')[0].strip()
-        )
-        anime_types.append(row.xpath("./td[3]/text()")[0].strip())
-        anime_urls.append(row.xpath('./td/div[@class="title"]/a/@href')[0].strip())
-
-    mal_ids = [regex.findall(r"\/anime\/(\d+)", link)[0] for link in anime_urls]
-
-    data = []
-
-    for mal_id, url, title, type in zip(mal_ids, anime_urls, anime_titles, anime_types):
-        if type == "TV":
-            data.append({"mal_id": mal_id, "title": title.strip(), "url": url})
-
-    return data[:5]
-
-
-async def parse_anime(html, mal_id, season_title_lang, ep_title_lang):
+def parse_anime(html, mal_id):
     """
     Parses results from the fetch_anime() function
     """
-
-    episode_titles = await parse_episodes([html], ep_title_lang)
-
-    html = lxml.html.fromstring(html)
 
     title_romanji = (html.xpath("//meta[@property='og:title']/@content")[0]).strip()
 
@@ -214,10 +94,10 @@ async def parse_anime(html, mal_id, season_title_lang, ep_title_lang):
 
     anime_title = title_english
 
-    if season_title_lang == "japanese":
+    if ANIME_TITLE_LANG == "japanese":
         anime_title = title_japanese
 
-    if season_title_lang == "romanji":
+    if ANIME_TITLE_LANG == "romanji":
         anime_title = title_romanji
 
     data = {
@@ -228,13 +108,15 @@ async def parse_anime(html, mal_id, season_title_lang, ep_title_lang):
         "ep_pages": ep_pages,
     }
 
-    # Parses the first 100 or less episode titles from the already loaded HTML
-    data["ep_titles"] = episode_titles
+    if FIRST_100 == True:
+        # Parses the first 100 or less episode titles from the already loaded HTML
+        episode_titles = parse_episodes([html])
+        data["ep_titles"] = episode_titles
 
     return data
 
 
-async def parse_episodes(htmls, ep_title_lang):
+def parse_episodes(htmls):
     """
     Parses results from the fetch_episodes() function
     """
@@ -242,8 +124,6 @@ async def parse_episodes(htmls, ep_title_lang):
     data = {"english": {}, "romanji": {}, "japanese": {}}
 
     for html in htmls:
-        html = lxml.html.fromstring(html)
-
         episode_numbers = html.xpath('//td[@class="episode-number nowrap"]/text()')
 
         titles = html.xpath('//td[@class="episode-title fs12"]')
@@ -275,4 +155,4 @@ async def parse_episodes(htmls, ep_title_lang):
             data["romanji"].update({ep_no: (title_ro)})
             data["japanese"].update({ep_no: (title_jp)})
 
-    return data[ep_title_lang]
+    return data[EP_TITLE_LANG]

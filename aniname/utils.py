@@ -10,7 +10,11 @@ from rich.markup import escape
 from rich.text import Text
 from rich.tree import Tree
 
-ANITOMY_OPTIONS = {"allowed_delimiters": " -_.&+,|"}
+EP_ANITOMY_OPTIONS = {"allowed_delimiters": " -_.&+,|"}
+ANI_ANITOMY_OPTIONS = {
+    "allowed_delimiters": " -_.&+,|",
+    "title_before_episode": "false",
+}
 
 
 def parse_dir_basename(dir_basename: str) -> tuple:
@@ -53,7 +57,7 @@ def get_local_ep_range(ani_dir: Path, match_pattern=r"*.mkv") -> tuple[int]:
 
     ep_no_list = [
         int(
-            aniparse(remove_part_no(ep_path.stem), options=ANITOMY_OPTIONS)[
+            aniparse(remove_part_no(ep_path.stem), options=EP_ANITOMY_OPTIONS)[
                 "episode_number"
             ]
         )
@@ -76,13 +80,13 @@ def format_zeros(number: int, max_number=1) -> str:
     return str(number).zfill(len(str(max_number)))
 
 
-def create_anitomy_dict(ep_file_paths: list[Path]) -> list[dict]:
+def episode_anitomy_dict(ep_file_paths: list[Path]) -> list[dict]:
     """
-    Creates a dict with parsed episode filenames.
+    Creates a dictionary with parsed episode filenames.
     """
 
     anitomy_dict = [
-        (aniparse(remove_part_no(path.name), options=ANITOMY_OPTIONS))
+        (aniparse(remove_part_no(path.name), options=EP_ANITOMY_OPTIONS))
         for path in ep_file_paths
     ]
 
@@ -90,6 +94,21 @@ def create_anitomy_dict(ep_file_paths: list[Path]) -> list[dict]:
         anitomy_dict[i]["file_name"] = ep_file.name
 
     anitomy_dict = [anitomy for anitomy in anitomy_dict if "episode_number" in anitomy]
+
+    return anitomy_dict
+
+
+def anime_anitomy_dict(anime_file_paths: list[Path]) -> list[dict]:
+    """
+    Creates a dictionary with parsed anime titles.
+    """
+
+    anitomy_dict = [
+        (aniparse(path.name, options=ANI_ANITOMY_OPTIONS)) for path in anime_file_paths
+    ]
+
+    for i, ani_dict in enumerate(anime_file_paths):
+        anitomy_dict[i]["path"] = ani_dict
 
     return anitomy_dict
 
@@ -105,12 +124,17 @@ def format_punctuations(dir_basename: str) -> str:
     return dir_basename.strip()
 
 
-def path_fix_exisiting(name: str, dir_path: Path) -> str:
+def path_fix_exisiting(new_path: Path) -> Path:
     """
     Expands name portion of file/folder name with numeric ' (x)' suffix to
     return name that doesn't exist already.
     """
 
+    name = new_path.name
+    dir_path = new_path.parent
+
+    if not (dir_path / name).exists():
+        return dir_path / name
 
     name_split = name.rsplit(".", 1)
     name = name_split[0]
@@ -129,7 +153,7 @@ def path_fix_exisiting(name: str, dir_path: Path) -> str:
     if indexes:
         idx += sorted(indexes)[-1]
 
-    return f"{name} ({idx}){ext}"
+    return dir_path / f"{name} ({idx}){ext}"
 
 
 def walk_directory(directory: Path, tree: Tree) -> None:
@@ -166,19 +190,39 @@ def walk_directory(directory: Path, tree: Tree) -> None:
             tree.add(Text(icon) + text_filename)
 
 
-def find_ani_subdir(dir_path: Path, match_pattern=r"*.mkv") -> list[Path]:
+def find_formatted_subdir(dir_path: Path, match_pattern=r"*.mkv") -> list[Path]:
     """
-    Scans all sub directories to find the ones matching the required format.
+    Scans all sub directories to find the ones having .mkv files and matching the required format.
     """
 
-    scan_result = []
+    scan_result: set[Path] = set()
 
     matching_paths = dir_path.rglob(match_pattern)
     for path in matching_paths:
-        if (
-            not path.parent in scan_result
-            and parse_dir_basename(path.parent.name) is not None
-        ):
-            scan_result.append(path.parent)
+        if parse_dir_basename(path.parent.name) is not None:
+            scan_result.add(Path(path.parent))
 
-    return scan_result
+    return list(scan_result)
+
+
+def find_ani_subdir(dir_path: Path, match_pattern=r"*.mkv") -> list[Path]:
+    """
+    Scans all sub directories to find the ones having .mkv files.
+    """
+
+    scan_result: set[Path] = set()
+
+    matching_paths = dir_path.rglob(match_pattern)
+    for path in matching_paths:
+        if parse_dir_basename(path.parent.name) is None:
+            scan_result.add(path.parent)
+
+    return list(scan_result)
+
+
+def pause() -> None:
+    """
+    Pauses program until the Enter key is pressed
+    """
+
+    input("Press the Enter key to continue . . .")

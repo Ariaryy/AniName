@@ -31,14 +31,27 @@ cd AniName
 pip install -r requirements.txt
 
 # Run the app
-python rename_utility.py
+python aniname
 ```
 # Usage and Options
 
+* [General Options](#general-options)
 * [Pre-requisite](#pre-requisite)
 * [Rename Utility](#rename-utility)
 * [Config File](#config-file)
 * [Restore Utility](#restore-utility)
+
+
+## General Options
+
+```
+python aniname [OPTIONS]
+```
+
+```
+  -h, --help         show this help message and exit
+  -r, --restore      Run the restore utility
+```
 
 ## Pre-requisite
 
@@ -89,7 +102,7 @@ The <b>Rename Utility</b> is used to batch rename Anime episode files.
 
 To use the <b>Rename Utility</b>, open the command line in the app's folder and run:
 ```bash
-python rename_utility.py
+python aniname
 ```
 
 When you launch the <b>Rename Utility</b>, you are asked to press Enter to select your Anime a folder. It refers to the folder containing the Anime(s) the app is to rename.
@@ -105,7 +118,13 @@ After the rename, a backup of all previous filenames are stored in a folder call
 
 ## Config File
 
-The <b>conf.ini</b> file present in the app folder allows you to customize how your files are renamed.
+When you first run the [Rename Utility](#rename-utility), a <b>conf.ini</b> file will be created in the following paths for respective platforms:
+
+- Windows: `%APPDATA%\AniName`
+- Linux: `~/.local/share/AniName`
+- Mac: `~/Library/Application Support/AniName`
+
+The <b>conf.ini</b> file allows you to customize how your files are renamed.
 
 ### Language Options
 
@@ -188,7 +207,7 @@ It is done as a measure of safety in case you wish to revert to the previous fil
 
 The <b>Restore Utility</b> can be used to revert to previous filenames. To use the <b>Restore Utility</b>, open the command line in the app's folder and run:
 ```bash
-python restore_utility.py
+python aniname -r
 ```
 
 Specifiy the path of the  <b>ORIGINAL_EPISODE_FILENAMES</b> folder and select the backup file. Confirm to proceed restoring the filenames.

@@ -8,8 +8,8 @@ from pathlib import Path
 
 import regex
 
+from . import utils
 from .error_handler import HandleError
-from .utils import format_punctuations
 
 
 @dataclass(slots=True)
@@ -22,8 +22,9 @@ class Config:
     anime_title_format: str = field(init=False, default_factory=str)
     ep_title_lang: str = field(init=False, default_factory=str)
     anime_title_lang: str = field(init=False, default_factory=str)
+    auto_rename: bool = field(init=False, default_factory=bool)
 
-    def init(self, conf_path: Path) -> None:
+    def __init__(self, conf_path: Path) -> None:
         """
         Initializes the data in the conf file to the object.
         """
@@ -31,12 +32,14 @@ class Config:
         try:
             with open(conf_path, "x", encoding="utf-8") as file:
                 file.write(
-                    """# Guide: https://github.com/AbhiramH427/AniName#config-file
+                    """# Guide: https://github.com/Ariaryy/AniName#config-file
                 
 [preferences]
                         
 season_title_language = english 
 episode_title_language = english
+
+auto_rename = true
 
 [formatting]
 
@@ -59,6 +62,8 @@ season_format = {S&sn|}{P&pn|}{{ - }}{st|}"""
 
             self.anime_title_format = config_file["formatting"]["season_format"]
             self.anime_title_lang = config_file["preferences"]["season_title_language"]
+
+            self.auto_rename = config_file["preferences"]["auto_rename"]
         except KeyError as exception:
             HandleError.config_key_error(exception)
 
@@ -118,4 +123,4 @@ season_format = {S&sn|}{P&pn|}{{ - }}{st|}"""
         if len(format_split) == 0:
             format_split.append("Episode name not found")
 
-        return format_punctuations("".join(format_split))
+        return utils.format_punctuations("".join(format_split))

@@ -1,6 +1,6 @@
-aiohttp==3.8.6
+aiohttp==3.9.1
 aniparse==1.2.1
-lxml==4.9.3
-rich==13.6.0
+lxml==5.1.0
+rich==13.7.0
 tinkerer==1.7.2
-regex==2023.10.3
+regex==2023.12.25
