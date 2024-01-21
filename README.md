@@ -2,8 +2,9 @@
   <br>
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://user-images.githubusercontent.com/69304096/182015689-b968aabc-1deb-4dd7-b6a5-45554c0f8454.png">
-    <img alt="AniName Logo" width=200 src="https://user-images.githubusercontent.com/69304096/182155020-58d38e58-33dc-4688-9f20-a2d68e8dc51e.png">
+    <img alt="AniName Logo" width=200 src="https://github.com/Ariaryy/AniName/assets/69304096/2a56e4b4-2f56-4cc8-8d9a-f9b0e15694d9">
   </picture>
+
   <br>
   AniName
   <br>
