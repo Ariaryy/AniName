@@ -2,8 +2,9 @@ import asyncio
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from . import utils, conf_loader
-from .anime import Anime, NoMatchingDir
+from . import conf_loader, utils
+from .anime import Anime
+from .error_handler import HandleError
 
 ANIME_TITLE_LANG = conf_loader.conf.anime_title_lang
 EP_TITLE_LANG = conf_loader.conf.ep_title_lang
@@ -58,3 +59,10 @@ class AnimeList:
                 fetch_anime_tasks.append(asyncio.create_task(anime.fetch_anime()))
 
             await asyncio.gather(*fetch_anime_tasks)
+
+
+class NoMatchingDir(Exception):
+    """Raised when no directories matching the scan format were found."""
+
+    def __init__(self) -> None:
+        HandleError.no_matching_dir()

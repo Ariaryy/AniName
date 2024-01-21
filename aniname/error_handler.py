@@ -3,10 +3,11 @@ Contains a class with static methods to print appropriate error messages and exi
 """
 
 import asyncio
+import sys
 
 from rich.console import Console
 
-from . import utils, http_session
+from . import http_session, utils
 
 CONSOLE = Console()
 
@@ -37,6 +38,8 @@ RESTORE_NOT_FOUND = """
         
 [yellow]Alternatively, you can try editing the path in the [u]{json_file}.json[not u] file to fix the issue.\n"""
 
+NO_BACKUP_FOUND = """[b][red]No backup files were found."""
+
 
 class HandleError:
     """
@@ -44,11 +47,13 @@ class HandleError:
     """
 
     @staticmethod
-    def print_and_exit(error_message: str) -> None:
+    def print_exit(error_message: str, exit: bool=True) -> None:
         CONSOLE.print(error_message)
-        asyncio.create_task(http_session.close_client_session())
-        utils.pause()
-        exit()
+
+        if (exit):
+            asyncio.create_task(http_session.close_client_session())
+            utils.pause()
+            sys.exit()
 
     @staticmethod
     def no_matching_dir() -> None:
@@ -56,7 +61,7 @@ class HandleError:
         Prints an error message when no directories matching the scan format were found.
         """
 
-        HandleError.print_and_exit(NO_MATCHING_DIR)
+        HandleError.print_exit(NO_MATCHING_DIR)
 
     @staticmethod
     def config_parsing_error(exception: Exception) -> None:
@@ -64,7 +69,7 @@ class HandleError:
         Prints an error message when there's an error parsing the config file.
         """
 
-        HandleError.print_and_exit(
+        HandleError.print_exit(
             CONFIG_PARSE_ERROR.format(
                 exception=f"{type(exception).__name__} - {exception}"
             )
@@ -76,7 +81,7 @@ class HandleError:
         Prints an error message when there's a missing key in the config file.
         """
 
-        HandleError.print_and_exit(
+        HandleError.print_exit(
             CONFIG_KEY_ERROR.format(
                 exception=f"{type(exception).__name__} - {exception}"
             )
@@ -88,6 +93,14 @@ class HandleError:
         Prints an error message when the restore directory does not exist.
         """
 
-        HandleError.print_and_exit(
-            RESTORE_NOT_FOUND.format(dir_path=str(dir_path), json_file=json_file)
+        HandleError.print_exit(
+            RESTORE_NOT_FOUND.format(dir_path=str(dir_path), json_file=json_file), exit=False
         )
+
+    @staticmethod
+    def no_backup_found() -> None:
+        """
+        Prints an error message when no directories matching the scan format were found.
+        """
+
+        HandleError.print_exit(NO_BACKUP_FOUND)

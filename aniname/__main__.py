@@ -17,8 +17,20 @@ from rich.prompt import Confirm, Prompt
 from rich.table import Table
 from rich.tree import Tree
 
-current_script_directory = os.path.dirname(os.path.abspath(__file__))
-project_root_directory = os.path.dirname(current_script_directory)
+
+def get_current_script_directory():
+    if getattr(
+        sys, "frozen", False
+    ):  # Check if the script is running in a PyInstaller bundle
+        return os.path.dirname(sys.executable)
+    elif __file__:
+        return os.path.dirname(os.path.abspath(__file__))
+    else:
+        # Handle the case where neither sys.frozen nor __file__ is available
+        raise RuntimeError("Unable to determine script directory.")
+
+
+project_root_directory = os.path.dirname(get_current_script_directory())
 sys.path.insert(0, project_root_directory)
 
 from aniname import http_session, restore_utility, utils
@@ -92,20 +104,21 @@ def print_rename_summary(anime_list: AnimeList):
             f":open_file_folder: [link {anime.new_dir_path.as_uri()}]{anime.new_dir_path}",
             guide_style="bold bright_blue",
         )
+        
         utils.walk_directory(anime.new_dir_path, tree)
         print()
         rprint(tree)
 
     print_divider("[b]Backup[/b]")
 
-    oldfilespath = anime_list.init_dir / "ORIGINAL_EPISODE_FILENAMES"
+    old_files_path = anime_list.init_dir.parent / "ORIGINAL_EPISODE_FILENAMES"
     CONSOLE.print(
         f"""
 [b][yellow]The original episode filenames are backed up in the following folder:
-[link {oldfilespath.as_uri()}]{oldfilespath}[/link {oldfilespath.as_uri()}]
+[link {old_files_path.as_uri()}]{old_files_path}[/link {old_files_path.as_uri()}]
 
 If you wish to restore the orignal episode filenames, use the restore utility.
-\n"""
+"""
     )
 
     print()
@@ -128,9 +141,31 @@ async def user_confirmation() -> None:
         sys.exit()
 
 
-async def main():
-    INPUT_DIR = initialize()
+def offer_restore(anime_list: AnimeList) -> None:
+    CONSOLE.print("[green]Do you wish to run the restore utility now?")
+    CHOICE = Confirm.ask()
 
+    if CHOICE:
+        old_files_path = anime_list.init_dir.parent / "ORIGINAL_EPISODE_FILENAMES"
+        return restore_utility.restore(old_files_path)
+
+
+async def main():
+    parser = ArgumentParser(
+        prog="AniName",
+        description="Batch rename Anime Episode files with customizable formatting.",
+    )
+
+    parser.add_argument(
+        "-r", "--restore", help="Run the restore utility", action="store_true"
+    )
+
+    args = parser.parse_args()
+
+    if args.restore:
+        return restore_utility.restore()
+
+    INPUT_DIR = initialize()
     anime_list = AnimeList(init_dir=INPUT_DIR)
 
     await anime_list.scan_animes()
@@ -142,28 +177,14 @@ async def main():
     print_divider("[b]Renaming[/b]")
 
     await anime_list.rename_animes()
-
     await http_session.close_client_session()
 
     print_divider("[b]Overview[/b]")
-
     print_rename_summary(anime_list)
+    offer_restore(anime_list)
 
     utils.pause()
 
 
 if __name__ == "__main__":
-    parser = ArgumentParser(
-        prog="AniName",
-        description="Batch rename Anime Episode files with customizable formatting.",
-    )
-    parser.add_argument(
-        "-r", "--restore", help="Run the restore utility", action="store_true"
-    )
-
-    args = parser.parse_args()
-
-    if args.restore:
-        restore_utility.restore()
-    else:
-        asyncio.run(main())
+    asyncio.run(main())

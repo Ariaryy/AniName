@@ -13,10 +13,8 @@ from rich.columns import Columns
 from rich.console import Console
 from rich.panel import Panel
 
-from . import utils, conf_loader
+from . import conf_loader, utils
 from .config import Config
-
-from .error_handler import HandleError
 from .mal import fetch, parse_anime, parse_episodes
 
 if platform == "win32":
@@ -116,7 +114,15 @@ class Anime:
 
         anitomy_dict = utils.episode_anitomy_dict(ep_file_paths)
 
-        backup_ep_names = {str(self.new_dir_path): {}}
+        restore_dict = {
+            "mal_id": self.mal_id,
+            "title": self.title,
+            "dir_path": str(self.new_dir_path),
+            "season": self.season,
+            "part": self.season,
+            "rename_count": 0,
+            "restore": {},
+        }
 
         for anitomy in anitomy_dict:
             ep_file_path: Path = self.dir_path / anitomy["file_name"]
@@ -154,10 +160,12 @@ class Anime:
                     )
                 )
 
-                backup_ep_names[str(self.new_dir_path)].update(
+                restore_dict["restore"].update(
                     {f"{new_ep_filename}": f"{old_ep_filename}{file_ext}"}
                 )
-            except:
+
+                restore_dict["rename_count"] += 1
+            except Exception:
                 self.rename_log.append(
                     Panel(f"[b]{old_ep_filename}\n\n[red]Failed to rename")
                 )
@@ -175,13 +183,6 @@ class Anime:
             "w",
             encoding="utf-8",
         ) as file:
-            file.write(json.dumps(backup_ep_names, indent=4))
+            file.write(json.dumps(restore_dict, indent=4))
 
         CONSOLE.print(Align(Columns(self.rename_log), "center"))
-
-
-class NoMatchingDir(Exception):
-    """Raised when no directories matching the scan format were found."""
-
-    def __init__(self) -> None:
-        HandleError.no_matching_dir()

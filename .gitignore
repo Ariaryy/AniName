@@ -8,6 +8,8 @@ aniname/__pycache__
 # Test & misc files
 misc
 tests
+cli.py
+setup.py
 
 # Environment
 .venv
