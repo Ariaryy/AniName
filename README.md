@@ -4,7 +4,6 @@
     <source media="(prefers-color-scheme: dark)" srcset="https://github.com/Ariaryy/AniName/assets/69304096/2a56e4b4-2f56-4cc8-8d9a-f9b0e15694d9">
     <img alt="AniName Logo" width=200 src="https://github.com/Ariaryy/AniName/assets/69304096/d4fbecf0-aaa8-4708-ad28-0b5332a95d0b">
   </picture>
-
   <br>
   AniName
   <br>
