@@ -1,4 +1,4 @@
-aiohttp==3.13.3
+aiohttp==3.13.4
 aniparse==1.2.2
 lxml==6.1.0
 rich==13.8.1
